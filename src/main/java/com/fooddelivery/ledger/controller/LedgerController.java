@@ -100,4 +100,22 @@ public class LedgerController {
         );
         return ResponseEntity.ok(entries);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/transactions")
+    public ResponseEntity<org.springframework.data.domain.Page<com.fooddelivery.ledger.dto.LedgerTransactionDto>> getTransactions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) UUID transactionId,
+            @RequestParam(required = false) UUID ownerId,
+            @RequestParam(required = false) AccountType ownerType,
+            @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category,
+            @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction
+    ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<com.fooddelivery.ledger.dto.LedgerTransactionDto> transactions = ledgerService.getTransactions(
+                transactionId, ownerId, ownerType, category, direction, pageable
+        );
+        return ResponseEntity.ok(transactions);
+    }
 }

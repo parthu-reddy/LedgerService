@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface ILedgerEntryRepository extends JpaRepository<LedgerEntry, UUID>, JpaSpecificationExecutor<LedgerEntry> {
     boolean existsByTransactionId(UUID transactionId);
+    
+    java.util.List<LedgerEntry> findByTransactionIdIn(java.util.List<UUID> transactionIds);
 }

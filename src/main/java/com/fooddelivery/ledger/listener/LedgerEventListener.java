@@ -26,7 +26,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class OrderEventListener {
+public class LedgerEventListener {
 
     private final DoubleEntryLedgerService ledgerService;
     private final ObjectMapper objectMapper;
@@ -34,9 +34,9 @@ public class OrderEventListener {
     @RetryableTopic(
             attempts = "5",
             backoff = @Backoff(delay = 1000, multiplier = 2.0),
-            autoCreateTopics = "false"
+            autoCreateTopics = "true"
     )
-    @KafkaListener(topics = KafkaConstants.TOPIC_ORDER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE)
+    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE)
     public void handleEvents(String payload, @Headers Map<String, Object> headers) throws Exception {
         JsonNode rootNode = objectMapper.readTree(payload);
         String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
