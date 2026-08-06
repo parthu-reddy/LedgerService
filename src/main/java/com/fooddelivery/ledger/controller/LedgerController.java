@@ -14,10 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/v1/ledger")
 @RequiredArgsConstructor
+@Slf4j
 public class LedgerController {
 
     private final ILedgerAccountRepository accountRepository;
