@@ -59,8 +59,7 @@ public class DoubleEntryLedgerService {
         LedgerAccount targetAccount = getOrCreateAccount(targetOwnerId, targetOwnerType);
 
         // Debit Source
-        sourceAccount.setBalance(sourceAccount.getBalance().subtract(amount));
-        accountRepository.save(sourceAccount);
+        accountRepository.updateBalance(sourceAccount.getId(), amount.negate());
         
         LedgerEntry debitEntry = LedgerEntry.builder()
                 .id(UUID.randomUUID())
@@ -74,8 +73,7 @@ public class DoubleEntryLedgerService {
         entryRepository.save(debitEntry);
 
         // Credit Target
-        targetAccount.setBalance(targetAccount.getBalance().add(amount));
-        accountRepository.save(targetAccount);
+        accountRepository.updateBalance(targetAccount.getId(), amount);
 
         LedgerEntry creditEntry = LedgerEntry.builder()
                 .id(UUID.randomUUID())

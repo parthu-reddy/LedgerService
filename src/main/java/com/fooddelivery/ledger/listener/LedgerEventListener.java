@@ -47,12 +47,15 @@ public class LedgerEventListener {
         // Handle ORDER_PAID or other events if needed
     }
 
+    private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
+
     @DltHandler
     public void handleDltEvent(String payload, 
                                @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, 
                                @Headers Map<String, Object> headers) {
         log.error("Event failed after all retries. Payload: {}, Topic: {}, Headers: {}", payload, topic, headers);
-        // Here we could persist it to a dead letter table in the database if needed
+        // Publish failure event for saga rollback
+        kafkaTemplate.send(KafkaConstants.TOPIC_LEDGER_EVENTS_DLQ, payload);
     }
 
     private void handleLedgerTransactionRequest(String payload) throws Exception {
