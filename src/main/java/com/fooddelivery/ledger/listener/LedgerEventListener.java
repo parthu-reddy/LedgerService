@@ -8,8 +8,6 @@ import com.fooddelivery.common.enums.AccountType;
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.common.util.KafkaHeaderUtils;
 import com.fooddelivery.ledger.service.DoubleEntryLedgerService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -18,29 +16,22 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class LedgerEventListener {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerEventListener.class);
     private final DoubleEntryLedgerService ledgerService;
     private final ObjectMapper objectMapper;
 
-    @RetryableTopic(
-            attempts = "5",
-            backoff = @Backoff(delay = 1000, multiplier = 2.0),
-            autoCreateTopics = "true"
-    )
+    @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true")
     @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE)
     public void handleEvents(String payload, @Headers Map<String, Object> headers) throws Exception {
         JsonNode rootNode = objectMapper.readTree(payload);
         String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
-        
         if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
             handleLedgerTransactionRequest(payload);
         }
@@ -50,9 +41,7 @@ public class LedgerEventListener {
     private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
 
     @DltHandler
-    public void handleDltEvent(String payload, 
-                               @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, 
-                               @Headers Map<String, Object> headers) {
+    public void handleDltEvent(String payload, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Headers Map<String, Object> headers) {
         log.error("Event failed after all retries. Payload: {}, Topic: {}, Headers: {}", payload, topic, headers);
         // Publish failure event for saga rollback
         kafkaTemplate.send(KafkaConstants.TOPIC_LEDGER_EVENTS_DLQ, payload);
@@ -70,8 +59,14 @@ public class LedgerEventListener {
         if (node.has("chargeCategory")) {
             category = ChargeCategory.valueOf(node.get("chargeCategory").asText());
         }
-        
         ledgerService.recordTransaction(transferId, fromId, fromType, toId, toType, amount, category);
         log.info("Successfully processed LEDGER_TRANSACTION_REQUEST for transferId: {}", transferId);
+    }
+
+    @java.lang.SuppressWarnings("all")
+    public LedgerEventListener(final DoubleEntryLedgerService ledgerService, final ObjectMapper objectMapper, final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate) {
+        this.ledgerService = ledgerService;
+        this.objectMapper = objectMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 }

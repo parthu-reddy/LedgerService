@@ -4,11 +4,8 @@ import com.fooddelivery.ledger.entity.LedgerAccount;
 import com.fooddelivery.ledger.entity.LedgerEntry;
 import com.fooddelivery.ledger.repository.ILedgerAccountRepository;
 import com.fooddelivery.ledger.repository.ILedgerEntryRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,18 +20,15 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class DoubleEntryLedgerService {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DoubleEntryLedgerService.class);
     private final ILedgerAccountRepository accountRepository;
     private final ILedgerEntryRepository entryRepository;
     private final EntityManager entityManager;
 
     @Transactional
-    public void recordTransaction(UUID transactionId, UUID sourceOwnerId, AccountType sourceOwnerType, 
-                                  UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount,
-                                  com.fooddelivery.common.enums.ChargeCategory category) {
+    public void recordTransaction(UUID transactionId, UUID sourceOwnerId, AccountType sourceOwnerType, UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount, com.fooddelivery.common.enums.ChargeCategory category) {
         if (amount == null) {
             log.error("Ledger transaction amount is null for transactionId: {}", transactionId);
             throw new IllegalArgumentException("Transaction amount cannot be null. Strict policy requires valid amounts.");
@@ -49,43 +43,20 @@ public class DoubleEntryLedgerService {
         if (sourceOwnerId.equals(targetOwnerId) && sourceOwnerType == targetOwnerType) {
             throw new IllegalArgumentException("Source and target accounts cannot be the same. Self-transfers are rejected.");
         }
-
         if (entryRepository.existsByTransactionId(transactionId)) {
             log.info("Transaction {} already recorded. Skipping.", transactionId);
             return;
         }
-
         LedgerAccount sourceAccount = getOrCreateAccount(sourceOwnerId, sourceOwnerType);
         LedgerAccount targetAccount = getOrCreateAccount(targetOwnerId, targetOwnerType);
-
         // Debit Source
         accountRepository.updateBalance(sourceAccount.getId(), amount.negate());
-        
-        LedgerEntry debitEntry = LedgerEntry.builder()
-                .id(UUID.randomUUID())
-                .transactionId(transactionId)
-                .accountId(sourceAccount.getId())
-                .direction(com.fooddelivery.common.enums.TransactionDirection.DEBIT)
-                .category(category)
-                .amount(amount)
-                .createdAt(LocalDateTime.now())
-                .build();
+        LedgerEntry debitEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(sourceAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.DEBIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(debitEntry);
-
         // Credit Target
         accountRepository.updateBalance(targetAccount.getId(), amount);
-
-        LedgerEntry creditEntry = LedgerEntry.builder()
-                .id(UUID.randomUUID())
-                .transactionId(transactionId)
-                .accountId(targetAccount.getId())
-                .direction(com.fooddelivery.common.enums.TransactionDirection.CREDIT)
-                .category(category)
-                .amount(amount)
-                .createdAt(LocalDateTime.now())
-                .build();
+        LedgerEntry creditEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(targetAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.CREDIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(creditEntry);
-        
         log.info("Recorded double entry transaction {} for amount {}", transactionId, amount);
     }
 
@@ -95,14 +66,7 @@ public class DoubleEntryLedgerService {
     }
 
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<LedgerEntry> getEntries(
-            UUID transactionId,
-            UUID ownerId,
-            AccountType ownerType,
-            com.fooddelivery.common.enums.ChargeCategory category,
-            com.fooddelivery.common.enums.TransactionDirection direction,
-            org.springframework.data.domain.Pageable pageable) {
-
+    public org.springframework.data.domain.Page<LedgerEntry> getEntries(UUID transactionId, UUID ownerId, AccountType ownerType, com.fooddelivery.common.enums.ChargeCategory category, com.fooddelivery.common.enums.TransactionDirection direction, org.springframework.data.domain.Pageable pageable) {
         UUID accountId = null;
         if (ownerId != null && ownerType != null) {
             java.util.Optional<LedgerAccount> accountOpt = accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType);
@@ -113,22 +77,12 @@ public class DoubleEntryLedgerService {
                 return org.springframework.data.domain.Page.empty(pageable);
             }
         }
-
-        org.springframework.data.jpa.domain.Specification<LedgerEntry> spec = 
-                com.fooddelivery.ledger.repository.LedgerEntrySpecification.filterBy(transactionId, accountId, category, direction);
-
+        org.springframework.data.jpa.domain.Specification<LedgerEntry> spec = com.fooddelivery.ledger.repository.LedgerEntrySpecification.filterBy(transactionId, accountId, category, direction);
         return entryRepository.findAll(spec, pageable);
     }
 
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<LedgerTransactionDto> getTransactions(
-            UUID transactionId,
-            UUID ownerId,
-            AccountType ownerType,
-            com.fooddelivery.common.enums.ChargeCategory category,
-            com.fooddelivery.common.enums.TransactionDirection direction,
-            org.springframework.data.domain.Pageable pageable) {
-
+    public org.springframework.data.domain.Page<LedgerTransactionDto> getTransactions(UUID transactionId, UUID ownerId, AccountType ownerType, com.fooddelivery.common.enums.ChargeCategory category, com.fooddelivery.common.enums.TransactionDirection direction, org.springframework.data.domain.Pageable pageable) {
         UUID accountId = null;
         if (ownerId != null && ownerType != null) {
             java.util.Optional<LedgerAccount> accountOpt = accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType);
@@ -138,10 +92,7 @@ public class DoubleEntryLedgerService {
                 return org.springframework.data.domain.Page.empty(pageable);
             }
         }
-
-        org.springframework.data.jpa.domain.Specification<LedgerEntry> spec = 
-                com.fooddelivery.ledger.repository.LedgerEntrySpecification.filterBy(transactionId, accountId, category, direction);
-
+        org.springframework.data.jpa.domain.Specification<LedgerEntry> spec = com.fooddelivery.ledger.repository.LedgerEntrySpecification.filterBy(transactionId, accountId, category, direction);
         // 1. Get Distinct Transaction IDs using CriteriaBuilder
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<UUID> query = cb.createQuery(UUID.class);
@@ -150,7 +101,6 @@ public class DoubleEntryLedgerService {
         if (spec != null) {
             query.where(spec.toPredicate(root, query, cb));
         }
-        
         // Count distinct query
         CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
         Root<LedgerEntry> countRoot = countQuery.from(LedgerEntry.class);
@@ -159,7 +109,6 @@ public class DoubleEntryLedgerService {
             countQuery.where(spec.toPredicate(countRoot, countQuery, cb));
         }
         Long total = entityManager.createQuery(countQuery).getSingleResult();
-
         // Fetch paginated distinct IDs (we need to order by the date, so we sort by Max createdAt)
         CriteriaQuery<Object[]> sortQuery = cb.createQuery(Object[].class);
         Root<LedgerEntry> sortRoot = sortQuery.from(LedgerEntry.class);
@@ -169,27 +118,15 @@ public class DoubleEntryLedgerService {
             sortQuery.where(spec.toPredicate(sortRoot, sortQuery, cb));
         }
         sortQuery.orderBy(cb.desc(cb.greatest(sortRoot.<LocalDateTime>get("createdAt"))));
-        
-        List<Object[]> sortedResult = entityManager.createQuery(sortQuery)
-                .setFirstResult((int) pageable.getOffset())
-                .setMaxResults(pageable.getPageSize())
-                .getResultList();
-
-        List<UUID> transactionIds = sortedResult.stream()
-                .map(obj -> (UUID) obj[0])
-                .collect(Collectors.toList());
-
+        List<Object[]> sortedResult = entityManager.createQuery(sortQuery).setFirstResult((int) pageable.getOffset()).setMaxResults(pageable.getPageSize()).getResultList();
+        List<UUID> transactionIds = sortedResult.stream().map(obj -> (UUID) obj[0]).collect(Collectors.toList());
         if (transactionIds.isEmpty()) {
             return org.springframework.data.domain.Page.empty(pageable);
         }
-
         // 2. Fetch all entries for these IDs
         List<LedgerEntry> entries = entryRepository.findByTransactionIdIn(transactionIds);
-
         // 3. Group by transactionId and category
-        Map<String, List<LedgerEntry>> grouped = entries.stream()
-                .collect(Collectors.groupingBy(e -> e.getTransactionId().toString() + "_" + e.getCategory().name()));
-
+        Map<String, List<LedgerEntry>> grouped = entries.stream().collect(Collectors.groupingBy(e -> e.getTransactionId().toString() + "_" + e.getCategory().name()));
         List<LedgerTransactionDto> dtos = grouped.values().stream().map(group -> {
             LedgerTransactionDto dto = new LedgerTransactionDto();
             LedgerEntry first = group.get(0);
@@ -206,32 +143,30 @@ public class DoubleEntryLedgerService {
             }
             return dto;
         }).collect(Collectors.toList());
-        
         // Maintain the sorted order returned by the distinct query
         List<LedgerTransactionDto> sortedDtos = new java.util.ArrayList<>();
         for (UUID tId : transactionIds) {
             sortedDtos.addAll(dtos.stream().filter(d -> d.getTransactionId().equals(tId)).collect(Collectors.toList()));
         }
-
         return new org.springframework.data.domain.PageImpl<>(sortedDtos, pageable, total);
     }
 
     private LedgerAccount getOrCreateAccount(UUID ownerId, AccountType ownerType) {
-        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
-                .orElseGet(() -> {
-                    try {
-                        LedgerAccount newAccount = LedgerAccount.builder()
-                                .id(UUID.randomUUID())
-                                .ownerId(ownerId)
-                                .ownerType(ownerType)
-                                .balance(BigDecimal.ZERO)
-                                .build();
-                        return accountRepository.saveAndFlush(newAccount);
-                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                        log.info("Concurrent account creation detected for owner: {} of type: {}", ownerId, ownerType);
-                        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
-                                .orElseThrow(() -> new IllegalStateException("Failed to get or create account concurrently", e));
-                    }
-                });
+        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).orElseGet(() -> {
+            try {
+                LedgerAccount newAccount = LedgerAccount.builder().id(UUID.randomUUID()).ownerId(ownerId).ownerType(ownerType).balance(BigDecimal.ZERO).build();
+                return accountRepository.saveAndFlush(newAccount);
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                log.info("Concurrent account creation detected for owner: {} of type: {}", ownerId, ownerType);
+                return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).orElseThrow(() -> new IllegalStateException("Failed to get or create account concurrently", e));
+            }
+        });
+    }
+
+    @java.lang.SuppressWarnings("all")
+    public DoubleEntryLedgerService(final ILedgerAccountRepository accountRepository, final ILedgerEntryRepository entryRepository, final EntityManager entityManager) {
+        this.accountRepository = accountRepository;
+        this.entryRepository = entryRepository;
+        this.entityManager = entityManager;
     }
 }

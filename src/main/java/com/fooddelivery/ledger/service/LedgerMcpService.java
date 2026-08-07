@@ -8,15 +8,13 @@ import com.fooddelivery.ledger.controller.LedgerController;
 import com.fooddelivery.ledger.dto.PayoutSettlementRequest;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
-
 import java.security.Principal;
 import java.util.UUID;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Slf4j
 public class LedgerMcpService {
-
+    @java.lang.SuppressWarnings("all")
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerMcpService.class);
     private final LedgerController ledgerController;
     private final ObjectMapper objectMapper;
 
@@ -66,7 +64,6 @@ public class LedgerMcpService {
             AccountType oType = ownerType != null && !ownerType.isEmpty() ? AccountType.valueOf(ownerType.toUpperCase()) : null;
             ChargeCategory cat = category != null && !category.isEmpty() ? ChargeCategory.valueOf(category.toUpperCase()) : null;
             TransactionDirection dir = direction != null && !direction.isEmpty() ? TransactionDirection.valueOf(direction.toUpperCase()) : null;
-
             return objectMapper.writeValueAsString(ledgerController.getEntries(page, size, tId, oId, oType, cat, dir).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
@@ -81,7 +78,6 @@ public class LedgerMcpService {
             AccountType oType = ownerType != null && !ownerType.isEmpty() ? AccountType.valueOf(ownerType.toUpperCase()) : null;
             ChargeCategory cat = category != null && !category.isEmpty() ? ChargeCategory.valueOf(category.toUpperCase()) : null;
             TransactionDirection dir = direction != null && !direction.isEmpty() ? TransactionDirection.valueOf(direction.toUpperCase()) : null;
-
             return objectMapper.writeValueAsString(ledgerController.getTransactions(page, size, tId, oId, oType, cat, dir).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
