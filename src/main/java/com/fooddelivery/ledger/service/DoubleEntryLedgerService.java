@@ -26,6 +26,7 @@ public class DoubleEntryLedgerService {
     private final ILedgerAccountRepository accountRepository;
     private final ILedgerEntryRepository entryRepository;
     private final EntityManager entityManager;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void recordTransaction(UUID transactionId, UUID sourceOwnerId, AccountType sourceOwnerType, UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount, com.fooddelivery.common.enums.ChargeCategory category) {
@@ -47,17 +48,118 @@ public class DoubleEntryLedgerService {
             log.info("Transaction {} already recorded. Skipping.", transactionId);
             return;
         }
-        LedgerAccount sourceAccount = getOrCreateAccount(sourceOwnerId, sourceOwnerType);
-        LedgerAccount targetAccount = getOrCreateAccount(targetOwnerId, targetOwnerType);
+
+        boolean sourceFirst = sourceOwnerId.compareTo(targetOwnerId) < 0;
+        LedgerAccount sourceAccount;
+        LedgerAccount targetAccount;
+        
+        if (sourceFirst) {
+            sourceAccount = getAccountForTransaction(sourceOwnerId, sourceOwnerType);
+            targetAccount = getAccountForTransaction(targetOwnerId, targetOwnerType);
+        } else {
+            targetAccount = getAccountForTransaction(targetOwnerId, targetOwnerType);
+            sourceAccount = getAccountForTransaction(sourceOwnerId, sourceOwnerType);
+        }
+
+        // Rule: Avoid negative balances for standard accounts (System/Platform accounts are exempt)
+        if (sourceOwnerType != AccountType.PLATFORM && sourceAccount.getBalance().compareTo(amount) < 0) {
+            log.error("Insufficient funds in source account {} for transaction {}", sourceAccount.getId(), transactionId);
+            throw new IllegalStateException("Insufficient funds in source account");
+        }
+
         // Debit Source
-        accountRepository.updateBalance(sourceAccount.getId(), amount.negate());
+        if (sourceOwnerType == AccountType.PLATFORM) {
+            eventPublisher.publishEvent(new com.fooddelivery.ledger.event.DeferredBalanceUpdateEvent(sourceAccount.getId(), amount.negate()));
+        } else {
+            accountRepository.updateBalance(sourceAccount.getId(), amount.negate());
+        }
         LedgerEntry debitEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(sourceAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.DEBIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(debitEntry);
+        
         // Credit Target
-        accountRepository.updateBalance(targetAccount.getId(), amount);
+        if (targetOwnerType == AccountType.PLATFORM) {
+            eventPublisher.publishEvent(new com.fooddelivery.ledger.event.DeferredBalanceUpdateEvent(targetAccount.getId(), amount));
+        } else {
+            accountRepository.updateBalance(targetAccount.getId(), amount);
+        }
         LedgerEntry creditEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(targetAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.CREDIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(creditEntry);
         log.info("Recorded double entry transaction {} for amount {}", transactionId, amount);
+    }
+
+    @Transactional
+    public void reverseTransaction(UUID originalTransactionId, UUID reversalTransactionId, String reason) {
+        reverseTransaction(originalTransactionId, reversalTransactionId, reason, null);
+    }
+
+    @Transactional
+    public void reverseTransaction(UUID originalTransactionId, UUID reversalTransactionId, String reason, BigDecimal partialAmount) {
+        log.info("Reversing transaction {} with reversal id {} due to: {}", originalTransactionId, reversalTransactionId, reason);
+        if (entryRepository.existsByTransactionId(reversalTransactionId)) {
+            log.info("Reversal transaction {} already recorded. Skipping.", reversalTransactionId);
+            return;
+        }
+
+        List<LedgerEntry> originalEntries = entryRepository.findByTransactionId(originalTransactionId);
+        if (originalEntries.isEmpty()) {
+            throw new IllegalStateException("Original transaction " + originalTransactionId + " not found. Cannot reverse.");
+        }
+
+        if (originalEntries.size() != 2) {
+            throw new IllegalStateException("Original transaction " + originalTransactionId + " does not have exactly 2 entries. Invalid state.");
+        }
+
+        LedgerEntry entry1 = originalEntries.get(0);
+        LedgerEntry entry2 = originalEntries.get(1);
+
+        // Deterministic locking to avoid deadlocks
+        boolean entry1First = entry1.getAccountId().compareTo(entry2.getAccountId()) < 0;
+        LedgerAccount account1;
+        LedgerAccount account2;
+        if (entry1First) {
+            account1 = accountRepository.findByIdForUpdate(entry1.getAccountId()).orElseThrow();
+            account2 = accountRepository.findByIdForUpdate(entry2.getAccountId()).orElseThrow();
+        } else {
+            account2 = accountRepository.findByIdForUpdate(entry2.getAccountId()).orElseThrow();
+            account1 = accountRepository.findByIdForUpdate(entry1.getAccountId()).orElseThrow();
+        }
+
+        for (LedgerEntry entry : originalEntries) {
+            // Reverse direction
+            com.fooddelivery.common.enums.TransactionDirection reverseDirection = 
+                entry.getDirection() == com.fooddelivery.common.enums.TransactionDirection.DEBIT 
+                    ? com.fooddelivery.common.enums.TransactionDirection.CREDIT 
+                    : com.fooddelivery.common.enums.TransactionDirection.DEBIT;
+            
+            BigDecimal originalAmountToReverse = (partialAmount != null) ? partialAmount : entry.getAmount();
+
+            // Adjust balance
+            BigDecimal amountAdjustment = reverseDirection == com.fooddelivery.common.enums.TransactionDirection.CREDIT 
+                ? originalAmountToReverse 
+                : originalAmountToReverse.negate();
+                
+            LedgerAccount account = entry.getAccountId().equals(account1.getId()) ? account1 : account2;
+            if (amountAdjustment.compareTo(BigDecimal.ZERO) < 0 && account.getOwnerType() != AccountType.PLATFORM && account.getBalance().compareTo(amountAdjustment.negate()) < 0) {
+                log.error("Insufficient funds in account {} for reversal {}", account.getId(), reversalTransactionId);
+                throw new IllegalStateException("Insufficient funds for reversal");
+            }
+
+            accountRepository.updateBalance(entry.getAccountId(), amountAdjustment);
+
+            LedgerEntry reversalEntry = LedgerEntry.builder()
+                .id(UUID.randomUUID())
+                .transactionId(reversalTransactionId)
+                .accountId(entry.getAccountId())
+                .direction(reverseDirection)
+                .category(entry.getCategory())
+                .amount(originalAmountToReverse)
+                .createdAt(LocalDateTime.now())
+                .build();
+            
+            entryRepository.save(reversalEntry);
+        }
+        
+        log.info("Successfully reversed transaction {}", originalTransactionId);
     }
 
     @Transactional
@@ -163,10 +265,26 @@ public class DoubleEntryLedgerService {
         });
     }
 
+    private LedgerAccount getOrCreateAccountForUpdate(UUID ownerId, AccountType ownerType) {
+        return accountRepository.findByOwnerIdAndOwnerTypeForUpdate(ownerId, ownerType).orElseGet(() -> {
+            getOrCreateAccount(ownerId, ownerType);
+            return accountRepository.findByOwnerIdAndOwnerTypeForUpdate(ownerId, ownerType)
+                .orElseThrow(() -> new IllegalStateException("Failed to get or create account concurrently"));
+        });
+    }
+
+    private LedgerAccount getAccountForTransaction(UUID ownerId, AccountType ownerType) {
+        if (ownerType == AccountType.PLATFORM) {
+            return getOrCreateAccount(ownerId, ownerType); // Skip pessimistic lock for hot accounts
+        }
+        return getOrCreateAccountForUpdate(ownerId, ownerType);
+    }
+
     @java.lang.SuppressWarnings("all")
-    public DoubleEntryLedgerService(final ILedgerAccountRepository accountRepository, final ILedgerEntryRepository entryRepository, final EntityManager entityManager) {
+    public DoubleEntryLedgerService(final ILedgerAccountRepository accountRepository, final ILedgerEntryRepository entryRepository, final EntityManager entityManager, final org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.accountRepository = accountRepository;
         this.entryRepository = entryRepository;
         this.entityManager = entityManager;
+        this.eventPublisher = eventPublisher;
     }
 }

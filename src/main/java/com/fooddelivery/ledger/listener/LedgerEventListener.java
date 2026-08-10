@@ -34,6 +34,8 @@ public class LedgerEventListener {
         String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
         if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
             handleLedgerTransactionRequest(payload);
+        } else if ("LEDGER_REVERSAL_REQUEST".equals(eventTypeStr)) {
+            handleLedgerReversalRequest(payload);
         }
         // Handle ORDER_PAID or other events if needed
     }
@@ -61,6 +63,19 @@ public class LedgerEventListener {
         }
         ledgerService.recordTransaction(transferId, fromId, fromType, toId, toType, amount, category);
         log.info("Successfully processed LEDGER_TRANSACTION_REQUEST for transferId: {}", transferId);
+    }
+
+    private void handleLedgerReversalRequest(String payload) throws Exception {
+        JsonNode node = objectMapper.readTree(payload);
+        UUID reversalId = UUID.fromString(node.get("reversalId").asText());
+        UUID originalTransactionId = UUID.fromString(node.get("orderId").asText());
+        BigDecimal amount = null;
+        if (node.has("amount") && !node.get("amount").isNull()) {
+            amount = new BigDecimal(node.get("amount").asText());
+        }
+        
+        ledgerService.reverseTransaction(originalTransactionId, reversalId, "Post-delivery refund reversal", amount);
+        log.info("Successfully processed LEDGER_REVERSAL_REQUEST for originalTransactionId: {}, reversalId: {}", originalTransactionId, reversalId);
     }
 
     @java.lang.SuppressWarnings("all")
