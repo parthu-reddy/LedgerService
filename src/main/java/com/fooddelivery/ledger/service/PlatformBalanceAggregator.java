@@ -19,7 +19,7 @@ public class PlatformBalanceAggregator {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void handleDeferredBalanceUpdate(DeferredBalanceUpdateEvent event) {
         try {
             accountRepository.updateBalance(event.getAccountId(), event.getAmount());
