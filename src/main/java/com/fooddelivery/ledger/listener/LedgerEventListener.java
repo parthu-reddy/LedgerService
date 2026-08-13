@@ -52,6 +52,10 @@ public class LedgerEventListener {
     private void handleLedgerTransactionRequest(String payload) throws Exception {
         JsonNode node = objectMapper.readTree(payload);
         UUID transferId = UUID.fromString(node.get("transferId").asText());
+        UUID referenceId = null;
+        if (node.has("referenceId")) {
+            referenceId = UUID.fromString(node.get("referenceId").asText());
+        }
         UUID fromId = UUID.fromString(node.get("fromId").asText());
         AccountType fromType = AccountType.valueOf(node.get("fromType").asText());
         UUID toId = UUID.fromString(node.get("toId").asText());
@@ -61,7 +65,7 @@ public class LedgerEventListener {
         if (node.has("chargeCategory")) {
             category = ChargeCategory.valueOf(node.get("chargeCategory").asText());
         }
-        ledgerService.recordTransaction(transferId, fromId, fromType, toId, toType, amount, category);
+        ledgerService.recordTransaction(transferId, referenceId, fromId, fromType, toId, toType, amount, category);
         log.info("Successfully processed LEDGER_TRANSACTION_REQUEST for transferId: {}", transferId);
     }
 
@@ -73,8 +77,12 @@ public class LedgerEventListener {
         if (node.has("amount") && !node.get("amount").isNull()) {
             amount = new BigDecimal(node.get("amount").asText());
         }
+        com.fooddelivery.common.enums.FaultType faultType = com.fooddelivery.common.enums.FaultType.UNKNOWN;
+        if (node.has("faultType") && !node.get("faultType").isNull()) {
+            faultType = com.fooddelivery.common.enums.FaultType.valueOf(node.get("faultType").asText());
+        }
         
-        ledgerService.reverseTransaction(originalTransactionId, reversalId, "Post-delivery refund reversal", amount);
+        ledgerService.reverseTransaction(originalTransactionId, reversalId, "Post-delivery refund reversal", amount, faultType);
         log.info("Successfully processed LEDGER_REVERSAL_REQUEST for originalTransactionId: {}, reversalId: {}", originalTransactionId, reversalId);
     }
 

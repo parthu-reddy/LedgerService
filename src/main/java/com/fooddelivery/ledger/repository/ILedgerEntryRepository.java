@@ -14,4 +14,6 @@ public interface ILedgerEntryRepository extends JpaRepository<LedgerEntry, UUID>
     java.util.List<LedgerEntry> findByTransactionId(UUID transactionId);
 
     java.util.List<LedgerEntry> findByTransactionIdIn(java.util.List<UUID> transactionIds);
+
+    java.util.List<LedgerEntry> findByReferenceId(UUID referenceId);
 }

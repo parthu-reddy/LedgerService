@@ -16,6 +16,8 @@ public class LedgerEntry {
     private UUID id;
     @Column(name = "transaction_id")
     private UUID transactionId;
+    @Column(name = "reference_id")
+    private UUID referenceId;
     @Column(name = "account_id")
     private UUID accountId;
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
@@ -36,6 +38,8 @@ public class LedgerEntry {
         private UUID id;
         @java.lang.SuppressWarnings("all")
         private UUID transactionId;
+        @java.lang.SuppressWarnings("all")
+        private UUID referenceId;
         @java.lang.SuppressWarnings("all")
         private UUID accountId;
         @java.lang.SuppressWarnings("all")
@@ -66,6 +70,15 @@ public class LedgerEntry {
         @java.lang.SuppressWarnings("all")
         public LedgerEntry.LedgerEntryBuilder transactionId(final UUID transactionId) {
             this.transactionId = transactionId;
+            return this;
+        }
+
+        /**
+         * @return {@code this}.
+         */
+        @java.lang.SuppressWarnings("all")
+        public LedgerEntry.LedgerEntryBuilder referenceId(final UUID referenceId) {
+            this.referenceId = referenceId;
             return this;
         }
 
@@ -116,13 +129,13 @@ public class LedgerEntry {
 
         @java.lang.SuppressWarnings("all")
         public LedgerEntry build() {
-            return new LedgerEntry(this.id, this.transactionId, this.accountId, this.direction, this.category, this.amount, this.createdAt);
+            return new LedgerEntry(this.id, this.transactionId, this.referenceId, this.accountId, this.direction, this.category, this.amount, this.createdAt);
         }
 
         @java.lang.Override
         @java.lang.SuppressWarnings("all")
         public java.lang.String toString() {
-            return "LedgerEntry.LedgerEntryBuilder(id=" + this.id + ", transactionId=" + this.transactionId + ", accountId=" + this.accountId + ", direction=" + this.direction + ", category=" + this.category + ", amount=" + this.amount + ", createdAt=" + this.createdAt + ")";
+            return "LedgerEntry.LedgerEntryBuilder(id=" + this.id + ", transactionId=" + this.transactionId + ", referenceId=" + this.referenceId + ", accountId=" + this.accountId + ", direction=" + this.direction + ", category=" + this.category + ", amount=" + this.amount + ", createdAt=" + this.createdAt + ")";
         }
     }
 
@@ -139,6 +152,11 @@ public class LedgerEntry {
     @java.lang.SuppressWarnings("all")
     public UUID getTransactionId() {
         return this.transactionId;
+    }
+
+    @java.lang.SuppressWarnings("all")
+    public UUID getReferenceId() {
+        return this.referenceId;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -174,6 +192,11 @@ public class LedgerEntry {
     @java.lang.SuppressWarnings("all")
     public void setTransactionId(final UUID transactionId) {
         this.transactionId = transactionId;
+    }
+
+    @java.lang.SuppressWarnings("all")
+    public void setReferenceId(final UUID referenceId) {
+        this.referenceId = referenceId;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -214,6 +237,9 @@ public class LedgerEntry {
         final java.lang.Object this$transactionId = this.getTransactionId();
         final java.lang.Object other$transactionId = other.getTransactionId();
         if (this$transactionId == null ? other$transactionId != null : !this$transactionId.equals(other$transactionId)) return false;
+        final java.lang.Object this$referenceId = this.getReferenceId();
+        final java.lang.Object other$referenceId = other.getReferenceId();
+        if (this$referenceId == null ? other$referenceId != null : !this$referenceId.equals(other$referenceId)) return false;
         final java.lang.Object this$accountId = this.getAccountId();
         final java.lang.Object other$accountId = other.getAccountId();
         if (this$accountId == null ? other$accountId != null : !this$accountId.equals(other$accountId)) return false;
@@ -246,6 +272,8 @@ public class LedgerEntry {
         result = result * PRIME + ($id == null ? 43 : $id.hashCode());
         final java.lang.Object $transactionId = this.getTransactionId();
         result = result * PRIME + ($transactionId == null ? 43 : $transactionId.hashCode());
+        final java.lang.Object $referenceId = this.getReferenceId();
+        result = result * PRIME + ($referenceId == null ? 43 : $referenceId.hashCode());
         final java.lang.Object $accountId = this.getAccountId();
         result = result * PRIME + ($accountId == null ? 43 : $accountId.hashCode());
         final java.lang.Object $direction = this.getDirection();
@@ -262,7 +290,7 @@ public class LedgerEntry {
     @java.lang.Override
     @java.lang.SuppressWarnings("all")
     public java.lang.String toString() {
-        return "LedgerEntry(id=" + this.getId() + ", transactionId=" + this.getTransactionId() + ", accountId=" + this.getAccountId() + ", direction=" + this.getDirection() + ", category=" + this.getCategory() + ", amount=" + this.getAmount() + ", createdAt=" + this.getCreatedAt() + ")";
+        return "LedgerEntry(id=" + this.getId() + ", transactionId=" + this.getTransactionId() + ", referenceId=" + this.getReferenceId() + ", accountId=" + this.getAccountId() + ", direction=" + this.getDirection() + ", category=" + this.getCategory() + ", amount=" + this.getAmount() + ", createdAt=" + this.getCreatedAt() + ")";
     }
 
     @java.lang.SuppressWarnings("all")
@@ -270,9 +298,10 @@ public class LedgerEntry {
     }
 
     @java.lang.SuppressWarnings("all")
-    public LedgerEntry(final UUID id, final UUID transactionId, final UUID accountId, final com.fooddelivery.common.enums.TransactionDirection direction, final com.fooddelivery.common.enums.ChargeCategory category, final BigDecimal amount, final LocalDateTime createdAt) {
+    public LedgerEntry(final UUID id, final UUID transactionId, final UUID referenceId, final UUID accountId, final com.fooddelivery.common.enums.TransactionDirection direction, final com.fooddelivery.common.enums.ChargeCategory category, final BigDecimal amount, final LocalDateTime createdAt) {
         this.id = id;
         this.transactionId = transactionId;
+        this.referenceId = referenceId;
         this.accountId = accountId;
         this.direction = direction;
         this.category = category;

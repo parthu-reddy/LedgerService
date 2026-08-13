@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import com.fooddelivery.common.enums.AccountType;
+import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.ledger.dto.LedgerTransactionDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -27,9 +28,14 @@ public class DoubleEntryLedgerService {
     private final ILedgerEntryRepository entryRepository;
     private final EntityManager entityManager;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @Transactional
+    public void recordTransaction(UUID transactionId, UUID sourceOwnerId, AccountType sourceOwnerType, UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount, ChargeCategory category) {
+        recordTransaction(transactionId, null, sourceOwnerId, sourceOwnerType, targetOwnerId, targetOwnerType, amount, category);
+    }
 
     @Transactional
-    public void recordTransaction(UUID transactionId, UUID sourceOwnerId, AccountType sourceOwnerType, UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount, com.fooddelivery.common.enums.ChargeCategory category) {
+    public void recordTransaction(UUID transactionId, UUID referenceId, UUID sourceOwnerId, AccountType sourceOwnerType, UUID targetOwnerId, AccountType targetOwnerType, BigDecimal amount, ChargeCategory category) {
+        log.info("Recording ledger transaction: {} from {} ({}) to {} ({}) for amount {}", transactionId, sourceOwnerId, sourceOwnerType, targetOwnerId, targetOwnerType, amount);
         if (amount == null) {
             log.error("Ledger transaction amount is null for transactionId: {}", transactionId);
             throw new IllegalArgumentException("Transaction amount cannot be null. Strict policy requires valid amounts.");
@@ -73,7 +79,7 @@ public class DoubleEntryLedgerService {
         } else {
             accountRepository.updateBalance(sourceAccount.getId(), amount.negate());
         }
-        LedgerEntry debitEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(sourceAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.DEBIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
+        LedgerEntry debitEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).referenceId(referenceId).accountId(sourceAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.DEBIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(debitEntry);
         
         // Credit Target
@@ -82,77 +88,123 @@ public class DoubleEntryLedgerService {
         } else {
             accountRepository.updateBalance(targetAccount.getId(), amount);
         }
-        LedgerEntry creditEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).accountId(targetAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.CREDIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
+        LedgerEntry creditEntry = LedgerEntry.builder().id(UUID.randomUUID()).transactionId(transactionId).referenceId(referenceId).accountId(targetAccount.getId()).direction(com.fooddelivery.common.enums.TransactionDirection.CREDIT).category(category).amount(amount).createdAt(LocalDateTime.now()).build();
         entryRepository.save(creditEntry);
         log.info("Recorded double entry transaction {} for amount {}", transactionId, amount);
     }
 
     @Transactional
     public void reverseTransaction(UUID originalTransactionId, UUID reversalTransactionId, String reason) {
-        reverseTransaction(originalTransactionId, reversalTransactionId, reason, null);
+        reverseTransaction(originalTransactionId, reversalTransactionId, reason, null, com.fooddelivery.common.enums.FaultType.UNKNOWN);
     }
 
     @Transactional
-    public void reverseTransaction(UUID originalTransactionId, UUID reversalTransactionId, String reason, BigDecimal partialAmount) {
-        log.info("Reversing transaction {} with reversal id {} due to: {}", originalTransactionId, reversalTransactionId, reason);
+    public void reverseTransaction(UUID originalTransactionId, UUID reversalTransactionId, String reason, BigDecimal partialAmount, com.fooddelivery.common.enums.FaultType faultType) {
+        log.info("Reversing transaction {} with reversal id {} due to: {} (Fault: {})", originalTransactionId, reversalTransactionId, reason, faultType);
         if (entryRepository.existsByTransactionId(reversalTransactionId)) {
             log.info("Reversal transaction {} already recorded. Skipping.", reversalTransactionId);
             return;
         }
 
-        List<LedgerEntry> originalEntries = entryRepository.findByTransactionId(originalTransactionId);
+        List<LedgerEntry> originalEntries = entryRepository.findByReferenceId(originalTransactionId);
+        if (originalEntries.isEmpty()) {
+            originalEntries = entryRepository.findByTransactionId(originalTransactionId);
+        }
         if (originalEntries.isEmpty()) {
             throw new IllegalStateException("Original transaction " + originalTransactionId + " not found. Cannot reverse.");
         }
 
-        if (originalEntries.size() != 2) {
-            throw new IllegalStateException("Original transaction " + originalTransactionId + " does not have exactly 2 entries. Invalid state.");
-        }
-
-        LedgerEntry entry1 = originalEntries.get(0);
-        LedgerEntry entry2 = originalEntries.get(1);
-
-        // Deterministic locking to avoid deadlocks
-        boolean entry1First = entry1.getAccountId().compareTo(entry2.getAccountId()) < 0;
-        LedgerAccount account1;
-        LedgerAccount account2;
-        if (entry1First) {
-            account1 = accountRepository.findByIdForUpdate(entry1.getAccountId()).orElseThrow();
-            account2 = accountRepository.findByIdForUpdate(entry2.getAccountId()).orElseThrow();
-        } else {
-            account2 = accountRepository.findByIdForUpdate(entry2.getAccountId()).orElseThrow();
-            account1 = accountRepository.findByIdForUpdate(entry1.getAccountId()).orElseThrow();
-        }
-
+        // Calculate total customer charge to determine proportional refund ratio
+        BigDecimal totalCustomerCharge = BigDecimal.ZERO;
         for (LedgerEntry entry : originalEntries) {
+            if (entry.getCategory() == com.fooddelivery.common.enums.ChargeCategory.ORDER_TOTAL && entry.getDirection() == com.fooddelivery.common.enums.TransactionDirection.DEBIT) {
+                totalCustomerCharge = totalCustomerCharge.add(entry.getAmount());
+            }
+        }
+
+        BigDecimal refundRatio = BigDecimal.ONE;
+        if (partialAmount != null && totalCustomerCharge.compareTo(BigDecimal.ZERO) > 0) {
+            refundRatio = partialAmount.divide(totalCustomerCharge, 4, java.math.RoundingMode.HALF_UP);
+            if (refundRatio.compareTo(BigDecimal.ONE) > 0) refundRatio = BigDecimal.ONE;
+        }
+
+        // Determine which transactions to reverse based on FaultType
+        List<LedgerEntry> entriesToReverse = new java.util.ArrayList<>();
+        for (LedgerEntry entry : originalEntries) {
+            boolean shouldReverse = false;
+            switch (entry.getCategory()) {
+                case ORDER_TOTAL:
+                case TAX:
+                case SGST:
+                case CGST:
+                case REFUND:
+                case PLATFORM_FIXED_FEE:
+                case PLATFORM_BONUS:
+                    shouldReverse = true;
+                    break;
+                case FOOD_COST:
+                    shouldReverse = (faultType == com.fooddelivery.common.enums.FaultType.RESTAURANT_FAULT);
+                    break;
+                case DELIVERY_FEE:
+                case PAYOUT:
+                    shouldReverse = (faultType == com.fooddelivery.common.enums.FaultType.RIDER_FAULT);
+                    break;
+                default:
+                    shouldReverse = true;
+            }
+            if (shouldReverse) {
+                entriesToReverse.add(entry);
+            }
+        }
+
+        // Deterministic locking of all involved accounts to avoid deadlocks
+        java.util.Set<UUID> accountIds = entriesToReverse.stream().map(LedgerEntry::getAccountId).collect(java.util.stream.Collectors.toSet());
+        List<UUID> sortedAccountIds = new java.util.ArrayList<>(accountIds);
+        java.util.Collections.sort(sortedAccountIds);
+        
+        java.util.Map<UUID, LedgerAccount> lockedAccounts = new java.util.HashMap<>();
+        for (UUID accId : sortedAccountIds) {
+            lockedAccounts.put(accId, accountRepository.findByIdForUpdate(accId).orElseThrow());
+        }
+
+        for (LedgerEntry entry : entriesToReverse) {
             // Reverse direction
             com.fooddelivery.common.enums.TransactionDirection reverseDirection = 
                 entry.getDirection() == com.fooddelivery.common.enums.TransactionDirection.DEBIT 
                     ? com.fooddelivery.common.enums.TransactionDirection.CREDIT 
                     : com.fooddelivery.common.enums.TransactionDirection.DEBIT;
             
-            BigDecimal originalAmountToReverse = (partialAmount != null) ? partialAmount : entry.getAmount();
+            BigDecimal amountToReverse = entry.getAmount().multiply(refundRatio).setScale(2, java.math.RoundingMode.HALF_UP);
+            if (amountToReverse.compareTo(BigDecimal.ZERO) == 0) continue;
 
             // Adjust balance
             BigDecimal amountAdjustment = reverseDirection == com.fooddelivery.common.enums.TransactionDirection.CREDIT 
-                ? originalAmountToReverse 
-                : originalAmountToReverse.negate();
+                ? amountToReverse 
+                : amountToReverse.negate();
                 
-            LedgerAccount account = entry.getAccountId().equals(account1.getId()) ? account1 : account2;
+            LedgerAccount account = lockedAccounts.get(entry.getAccountId());
             if (amountAdjustment.compareTo(BigDecimal.ZERO) < 0 && account.getOwnerType() != AccountType.PLATFORM && account.getBalance().compareTo(amountAdjustment.negate()) < 0) {
                 log.error("Insufficient funds in account {} for reversal {}", account.getId(), reversalTransactionId);
                 throw new IllegalStateException("Insufficient funds for reversal");
             }
 
-            accountRepository.updateBalance(entry.getAccountId(), amountAdjustment);
+            if (account.getOwnerType() == AccountType.PLATFORM) {
+                eventPublisher.publishEvent(new com.fooddelivery.ledger.event.DeferredBalanceUpdateEvent(account.getId(), amountAdjustment));
+            } else {
+                accountRepository.updateBalance(account.getId(), amountAdjustment);
+            }
+
+            // Create a unique transactionId for this specific reversal leg by combining reversalTransactionId and original transferId
+            UUID specificReversalTxId = UUID.nameUUIDFromBytes((reversalTransactionId.toString() + "_" + entry.getTransactionId().toString()).getBytes());
 
             LedgerEntry reversalEntry = LedgerEntry.builder()
                 .id(UUID.randomUUID())
-                .transactionId(reversalTransactionId)
+                .transactionId(specificReversalTxId)
+                .referenceId(originalTransactionId)
                 .accountId(entry.getAccountId())
                 .direction(reverseDirection)
                 .category(entry.getCategory())
-                .amount(originalAmountToReverse)
+                .amount(amountToReverse)
                 .createdAt(LocalDateTime.now())
                 .build();
             
