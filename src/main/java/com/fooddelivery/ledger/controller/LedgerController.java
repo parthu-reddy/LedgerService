@@ -15,9 +15,10 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/ledger")
+@lombok.extern.slf4j.Slf4j
 public class LedgerController {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerController.class);
+
     private final ILedgerAccountRepository accountRepository;
     private final com.fooddelivery.ledger.service.DoubleEntryLedgerService ledgerService;
     // We assume the system account ID for the platform is a fixed UUID

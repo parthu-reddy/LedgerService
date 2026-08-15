@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
+@SpringBootApplication(scanBasePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common", "com.fooddelivery"})
 @EnableJpaRepositories(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
 @EntityScan(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
 @EnableDiscoveryClient

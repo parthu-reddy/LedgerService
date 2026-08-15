@@ -8,8 +8,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import jakarta.persistence.Index;
+
 @Entity
-@Table(name = "ledger_entries", uniqueConstraints = {@jakarta.persistence.UniqueConstraint(columnNames = {"transaction_id", "direction"})})
+@Table(name = "ledger_entries", 
+       uniqueConstraints = {@jakarta.persistence.UniqueConstraint(columnNames = {"transaction_id", "direction"})},
+       indexes = {
+           @Index(name = "idx_ledger_reference_id", columnList = "reference_id"),
+           @Index(name = "idx_ledger_account_id", columnList = "account_id"),
+           @Index(name = "idx_ledger_created_at", columnList = "created_at")
+       })
 public class LedgerEntry {
     @Id
     @Column(name = "id")

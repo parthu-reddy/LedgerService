@@ -12,7 +12,6 @@ import java.util.UUID;
 
 @Repository
 public interface ILedgerAccountRepository extends JpaRepository<LedgerAccount, UUID> {
-    @Lock(LockModeType.OPTIMISTIC)
     Optional<LedgerAccount> findByOwnerIdAndOwnerType(UUID ownerId, AccountType ownerType);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

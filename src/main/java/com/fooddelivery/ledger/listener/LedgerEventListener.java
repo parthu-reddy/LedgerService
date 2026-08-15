@@ -21,9 +21,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@lombok.extern.slf4j.Slf4j
 public class LedgerEventListener {
     @java.lang.SuppressWarnings("all")
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LedgerEventListener.class);
+
     private final DoubleEntryLedgerService ledgerService;
     private final ObjectMapper objectMapper;
 
@@ -34,8 +35,8 @@ public class LedgerEventListener {
         String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
         if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
             handleLedgerTransactionRequest(payload);
-        } else if ("LEDGER_REVERSAL_REQUEST".equals(eventTypeStr)) {
-            handleLedgerReversalRequest(payload);
+        } else if ("LEDGER_BULK_TRANSACTION_REQUEST".equals(eventTypeStr)) {
+            handleLedgerBulkTransactionRequest(payload);
         }
         // Handle ORDER_PAID or other events if needed
     }
@@ -69,21 +70,10 @@ public class LedgerEventListener {
         log.info("Successfully processed LEDGER_TRANSACTION_REQUEST for transferId: {}", transferId);
     }
 
-    private void handleLedgerReversalRequest(String payload) throws Exception {
-        JsonNode node = objectMapper.readTree(payload);
-        UUID reversalId = UUID.fromString(node.get("reversalId").asText());
-        UUID originalTransactionId = UUID.fromString(node.get("orderId").asText());
-        BigDecimal amount = null;
-        if (node.has("amount") && !node.get("amount").isNull()) {
-            amount = new BigDecimal(node.get("amount").asText());
-        }
-        com.fooddelivery.common.enums.FaultType faultType = com.fooddelivery.common.enums.FaultType.UNKNOWN;
-        if (node.has("faultType") && !node.get("faultType").isNull()) {
-            faultType = com.fooddelivery.common.enums.FaultType.valueOf(node.get("faultType").asText());
-        }
-        
-        ledgerService.reverseTransaction(originalTransactionId, reversalId, "Post-delivery refund reversal", amount, faultType);
-        log.info("Successfully processed LEDGER_REVERSAL_REQUEST for originalTransactionId: {}, reversalId: {}", originalTransactionId, reversalId);
+    private void handleLedgerBulkTransactionRequest(String payload) throws Exception {
+        com.fooddelivery.common.dto.LedgerBulkTransactionRequest request = objectMapper.readValue(payload, com.fooddelivery.common.dto.LedgerBulkTransactionRequest.class);
+        ledgerService.recordBulkTransaction(request.getReferenceId(), request.getEntries());
+        log.info("Successfully processed LEDGER_BULK_TRANSACTION_REQUEST for referenceId: {}", request.getReferenceId());
     }
 
     @java.lang.SuppressWarnings("all")
