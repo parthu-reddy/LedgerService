@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common", "com.fooddelivery"})
-@EnableJpaRepositories(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
+@EnableJpaRepositories(basePackages = {"com.fooddelivery"})
 @EntityScan(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
 @EnableDiscoveryClient
 @EnableKafka
