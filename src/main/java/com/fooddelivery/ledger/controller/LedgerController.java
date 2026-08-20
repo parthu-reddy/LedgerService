@@ -54,6 +54,33 @@ public class LedgerController {
         return ResponseEntity.ok(java.util.Map.of("message", "Settlement recorded successfully", "transferId", transferId.toString()));
     }
 
+    /**
+     * The ledger's view of one order's total, consumed by ONDCIntegrationService via
+     * LedgerServiceClient.getOrderLedgerAmount and compared against what an ONDC counterparty
+     * reports during settlement reconciliation. The definition lives in
+     * DoubleEntryLedgerService.getOrderLedgerTotal.
+     *
+     * The path variable is declared as String because the Feign client declares it as String, but
+     * it must be the order's reference UUID: LedgerEntry.referenceId is a UUID and there is no
+     * business-key lookup. A non-UUID gets 400 rather than a misleading 0.00 -- returning a total
+     * for an id we could not parse would be worse than refusing.
+     *
+     * No @PreAuthorize, matching /payouts/pending: these are service-to-service calls and the Feign
+     * client sends no token. Flagged for review rather than secured here, since adding auth would
+     * break the caller.
+     */
+    @GetMapping("/orders/{orderId}/total")
+    public ResponseEntity<java.math.BigDecimal> getOrderLedgerAmount(@PathVariable String orderId) {
+        final UUID referenceId;
+        try {
+            referenceId = UUID.fromString(orderId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "orderId must be the order's reference UUID; received: " + orderId);
+        }
+        return ResponseEntity.ok(ledgerService.getOrderLedgerTotal(referenceId));
+    }
+
     @PreAuthorize("hasRole(\'ADMIN\')")
     @GetMapping("/admin/entries")
     public ResponseEntity<org.springframework.data.domain.Page<com.fooddelivery.ledger.entity.LedgerEntry>> getEntries(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) AccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {

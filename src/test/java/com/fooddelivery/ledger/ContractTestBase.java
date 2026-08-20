@@ -17,6 +17,9 @@ public abstract class ContractTestBase {
         DoubleEntryLedgerService ledgerService = Mockito.mock(DoubleEntryLedgerService.class);
         Mockito.when(accountRepository.findByOwnerTypeInAndBalanceGreaterThan(Mockito.anyList(), Mockito.any()))
                .thenReturn(java.util.Collections.emptyList());
+        // getOrderLedgerAmount contract: the ledger's total for one order's reference UUID.
+        Mockito.when(ledgerService.getOrderLedgerTotal(Mockito.any(java.util.UUID.class)))
+               .thenReturn(new java.math.BigDecimal("100.50"));
         LedgerController controller = new LedgerController(accountRepository, ledgerService);
         RestAssuredMockMvc.standaloneSetup(controller);
         

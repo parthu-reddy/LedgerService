@@ -1,6 +1,5 @@
 server:
   port: 8089
-
 spring:
   application:
     name: ledger-service
@@ -22,10 +21,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
   kafka:
-    listener:
-      observation-enabled: true
-    template:
-      observation-enabled: true
     bootstrap-servers: localhost:9092
     consumer:
       group-id: ledger-group
@@ -34,24 +29,9 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
         spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-
+  config:
+    import: optional:classpath:config/platform-defaults.yml
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
-
-management:
-  tracing:
-    enabled: true
-    sampling:
-      probability: 1.0
-  otlp:
-    tracing:
-      endpoint: http://localhost:4318/v1/traces
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-

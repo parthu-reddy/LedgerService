@@ -94,6 +94,39 @@ public class DoubleEntryLedgerService {
         log.info("Recorded double entry transaction {} for amount {}", transactionId, amount);
     }
 
+    /**
+     * The ledger total for one order, as reported to an ONDC settlement counterparty by
+     * ONDCIntegrationService.ReconciliationService (via GET /api/v1/ledger/orders/{orderId}/total).
+     *
+     * DEFINITION -- the one policy decision in this method, confirmed 2026-08-19:
+     *   the sum of CREDIT entries standing against the PLATFORM account for this order's referenceId.
+     *
+     * Why each part:
+     *   - CREDIT + PLATFORM, rather than every entry for the reference. This is a double-entry
+     *     ledger: recordTransaction writes a DEBIT against the source and a CREDIT against the
+     *     target for the same amount. Summing all entries for a reference would double-count.
+     *   - referenceId, not transactionId. One order produces several ledger transactions (food
+     *     cost, delivery fee, taxes); they share the order's referenceId.
+     *   - NO category filter. Scoping to CREDIT-into-platform for one order's reference already
+     *     excludes unrelated movements, and any category list would have to be maintained by hand
+     *     as new ChargeCategory values appear -- a filter that silently drops a new fee type is
+     *     worse than no filter, because the number it produces still looks plausible.
+     *
+     * KNOWN CONSEQUENCE, please sanity-check: this is GROSS, not net. A refund debits the platform
+     * account, and debits are excluded, so a refunded order still reports its original total. If
+     * reconciliation should net refunds off, change this to sum CREDIT minus DEBIT against the
+     * platform account -- one line, and the tests in DoubleEntryLedgerServiceOrderTotalTest pin the
+     * current behaviour explicitly so the change is visible.
+     */
+    @Transactional(readOnly = true)
+    public java.math.BigDecimal getOrderLedgerTotal(UUID referenceId) {
+        java.math.BigDecimal total = entryRepository.sumByReferenceIdAndDirectionAndOwnerType(
+                referenceId,
+                com.fooddelivery.common.enums.TransactionDirection.CREDIT,
+                AccountType.PLATFORM);
+        return total == null ? java.math.BigDecimal.ZERO : total;
+    }
+
     @Transactional
     public void recordBulkTransaction(UUID referenceId, List<com.fooddelivery.common.dto.LedgerEntryCommand> entries) {
         log.info("Recording bulk ledger transaction for reference: {}", referenceId);
