@@ -63,6 +63,9 @@ class DoubleEntryLedgerServiceOrderTotalTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
+
     @Autowired private DoubleEntryLedgerService ledgerService;
     @Autowired private ILedgerEntryRepository entryRepository;
     @Autowired private ILedgerAccountRepository accountRepository;

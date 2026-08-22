@@ -1,5 +1,7 @@
 package com.fooddelivery.ledger.contract;
 
+import com.fooddelivery.common.contract.KafkaStubMessageSender;
+
 import com.fooddelivery.common.enums.AccountType;
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.ledger.listener.LedgerEventListener;
