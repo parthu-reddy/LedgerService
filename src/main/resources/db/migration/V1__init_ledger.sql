@@ -29,6 +29,16 @@ CREATE TABLE failed_deferred_updates (
     resolved BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+
+
+
+
+
+
+
+
+
+
 CREATE INDEX idx_ledger_entries_tx ON ledger_entries(transaction_id);
 
 CREATE INDEX idx_ledger_entries_reference_id ON ledger_entries(reference_id);
@@ -36,4 +46,3 @@ CREATE INDEX idx_ledger_entries_reference_id ON ledger_entries(reference_id);
 CREATE INDEX idx_ledger_entries_account_id ON ledger_entries(account_id);
 
 CREATE INDEX idx_ledger_entries_created_at ON ledger_entries(created_at);
-
