@@ -42,7 +42,7 @@ public class LedgerEventListener {
     }
 
     @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true")
-    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE)
+    @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE + "-ledgereventlistener")
     public void handleEvents(String payload, @Headers Map<String, Object> headers) throws Exception {
         String extractedEventId = KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
         final String resolvedEventId;
