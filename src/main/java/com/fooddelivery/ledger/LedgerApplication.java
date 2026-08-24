@@ -1,6 +1,5 @@
 package com.fooddelivery.ledger;
 
-import com.fooddelivery.common.outbox.config.EnableOutbox;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
@@ -17,7 +16,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common.entity"})
 @EnableDiscoveryClient
 @EnableKafka
-@EnableOutbox
 @EnableScheduling
 @EnableAsync
 public class LedgerApplication {
