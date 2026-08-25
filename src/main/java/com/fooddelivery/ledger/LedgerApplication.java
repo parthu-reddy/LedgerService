@@ -12,8 +12,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(
     scanBasePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"}
 )
-@org.springframework.data.jpa.repository.config.EnableJpaRepositories(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common.repository"})
-@org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common.entity"})
+@org.springframework.data.jpa.repository.config.EnableJpaRepositories(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
+@org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"})
 @EnableDiscoveryClient
 @EnableKafka
 @EnableScheduling
