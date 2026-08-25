@@ -51,6 +51,7 @@ class LedgerTransactionConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
     @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    
     @Import(LedgerEventListener.class)
     static class TestConfig {
         @Bean

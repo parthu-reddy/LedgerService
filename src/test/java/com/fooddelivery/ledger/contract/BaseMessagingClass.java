@@ -47,8 +47,8 @@ import java.util.UUID;
 @EmbeddedKafka(partitions = 1, topics = {"ledger-events-dlq"})
 public abstract class BaseMessagingClass {
 
-    @org.springframework.boot.SpringBootConfiguration
-    @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    @org.springframework.boot.test.context.TestConfiguration
+    
     static class TestConfig {
         @Bean
         public KafkaMessageVerifier kafkaMessageVerifier() {
