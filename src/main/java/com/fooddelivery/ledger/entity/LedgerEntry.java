@@ -21,22 +21,29 @@ import jakarta.persistence.Index;
 public class LedgerEntry {
     @Id
     @Column(name = "id")
+    @jakarta.validation.constraints.NotNull
     private UUID id;
     @Column(name = "transaction_id")
+    @jakarta.validation.constraints.NotNull
     private UUID transactionId;
     @Column(name = "reference_id")
     private UUID referenceId;
     @Column(name = "account_id")
+    @jakarta.validation.constraints.NotNull
     private UUID accountId;
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @Column(name = "direction")
+    @jakarta.validation.constraints.NotNull
     private com.fooddelivery.common.enums.TransactionDirection direction; // CREDIT, DEBIT
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @Column(name = "category", nullable = false)
+    @jakarta.validation.constraints.NotNull
     private com.fooddelivery.common.enums.ChargeCategory category;
     @Column(name = "amount")
+    @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
     @Column(name = "created_at")
+    @jakarta.validation.constraints.NotNull
     private LocalDateTime createdAt;
 
 

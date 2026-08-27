@@ -16,16 +16,21 @@ import jakarta.persistence.EnumType;
 public class LedgerAccount {
     @Id
     @Column(name = "id")
+    @jakarta.validation.constraints.NotNull
     private UUID id;
     @Enumerated(EnumType.STRING)
     @Column(name = "owner_type")
+    @jakarta.validation.constraints.NotNull
     private AccountType ownerType;
     @Column(name = "owner_id")
+    @jakarta.validation.constraints.NotNull
     private UUID ownerId;
     @Column(name = "balance")
+    @jakarta.validation.constraints.NotNull
     private BigDecimal balance;
     @Version
     @Column(name = "lock_version")
+    @jakarta.validation.constraints.NotNull
     private Integer lockVersion;
 
 

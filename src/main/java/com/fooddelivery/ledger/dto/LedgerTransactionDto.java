@@ -6,11 +6,17 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class LedgerTransactionDto {
+    @jakarta.validation.constraints.NotNull
     private UUID transactionId;
+    @jakarta.validation.constraints.NotNull
     private ChargeCategory category;
+    @jakarta.validation.constraints.NotNull
     private UUID fromAccountId;
+    @jakarta.validation.constraints.NotNull
     private UUID toAccountId;
+    @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
+    @jakarta.validation.constraints.NotNull
     private LocalDateTime date;
 
 

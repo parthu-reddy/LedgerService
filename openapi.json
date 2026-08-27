@@ -280,6 +280,7 @@
   "components" : {
     "schemas" : {
       "PayoutSettlementRequest" : {
+        "required" : [ "amount", "ownerId", "ownerType" ],
         "type" : "object",
         "properties" : {
           "ownerId" : {
@@ -296,6 +297,7 @@
         }
       },
       "LedgerAccount" : {
+        "required" : [ "balance", "id", "lockVersion", "ownerId", "ownerType" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -320,6 +322,7 @@
         }
       },
       "LedgerTransactionDto" : {
+        "required" : [ "amount", "category", "date", "fromAccountId", "toAccountId", "transactionId" ],
         "type" : "object",
         "properties" : {
           "transactionId" : {
@@ -348,6 +351,7 @@
         }
       },
       "PageLedgerTransactionDto" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
           "totalPages" : {
@@ -397,6 +401,7 @@
         }
       },
       "PageableObject" : {
+        "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
         "type" : "object",
         "properties" : {
           "offset" : {
@@ -446,6 +451,7 @@
         }
       },
       "LedgerEntry" : {
+        "required" : [ "accountId", "amount", "category", "createdAt", "direction", "id", "transactionId" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -482,6 +488,7 @@
         }
       },
       "PageLedgerEntry" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
           "totalPages" : {

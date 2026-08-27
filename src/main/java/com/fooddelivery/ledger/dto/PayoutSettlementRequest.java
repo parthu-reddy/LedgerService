@@ -5,8 +5,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public class PayoutSettlementRequest {
+    @jakarta.validation.constraints.NotNull
     private UUID ownerId;
+    @jakarta.validation.constraints.NotNull
     private AccountType ownerType;
+    @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
 
     @java.lang.SuppressWarnings("all")
