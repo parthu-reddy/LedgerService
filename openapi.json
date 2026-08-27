@@ -358,6 +358,10 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "first" : {
             "type" : "boolean"
           },
@@ -377,10 +381,6 @@
             "items" : {
               "$ref" : "#/components/schemas/LedgerTransactionDto"
             }
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "sort" : {
             "type" : "array",
@@ -403,25 +403,25 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "paged" : {
+            "type" : "boolean"
+          },
           "sort" : {
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/SortObject"
             }
           },
-          "paged" : {
+          "unpaged" : {
             "type" : "boolean"
-          },
-          "pageNumber" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "pageSize" : {
             "type" : "integer",
             "format" : "int32"
           },
-          "unpaged" : {
-            "type" : "boolean"
+          "pageNumber" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },
@@ -492,6 +492,10 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "first" : {
             "type" : "boolean"
           },
@@ -511,10 +515,6 @@
             "items" : {
               "$ref" : "#/components/schemas/LedgerEntry"
             }
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "sort" : {
             "type" : "array",
