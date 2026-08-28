@@ -69,6 +69,8 @@ public class LedgerController {
      * client sends no token. Flagged for review rather than secured here, since adding auth would
      * break the caller.
      */
+    /** Read by ONDC settlement reconciliation, which runs as background work. */
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('SERVICE', 'ADMIN')")
     @GetMapping("/orders/{orderId}/total")
     public ResponseEntity<java.math.BigDecimal> getOrderLedgerAmount(@PathVariable String orderId) {
         final UUID referenceId;
