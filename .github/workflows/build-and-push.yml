@@ -74,7 +74,7 @@ jobs:
           file: LedgerService/Dockerfile
           push: true
           tags: hyd.ocir.io/axekmbadoczl/food-delivery/ledger-service:${{ github.sha }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
 
       - name: Checkout Deployment Repo
         uses: actions/checkout@v5
