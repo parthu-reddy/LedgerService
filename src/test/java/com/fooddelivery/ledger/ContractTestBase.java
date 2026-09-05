@@ -20,8 +20,10 @@ public abstract class ContractTestBase {
         // getOrderLedgerAmount contract: the ledger's total for one order's reference UUID.
         Mockito.when(ledgerService.getOrderLedgerTotal(Mockito.any(java.util.UUID.class)))
                .thenReturn(new java.math.BigDecimal("100.50"));
-        LedgerController controller = new LedgerController(accountRepository, ledgerService);
-        RestAssuredMockMvc.standaloneSetup(controller);
+        com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy = Mockito.mock(com.fooddelivery.common.security.money.MoneyAccessPolicy.class);
+        LedgerController controller = new LedgerController(accountRepository, ledgerService, moneyAccessPolicy);
+        com.fooddelivery.ledger.controller.InternalLedgerController internalController = new com.fooddelivery.ledger.controller.InternalLedgerController(ledgerService);
+        RestAssuredMockMvc.standaloneSetup(controller, internalController);
         
     }
 }

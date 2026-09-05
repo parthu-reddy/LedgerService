@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Added 2026-08-28 (FOLLOW_UPS item 13a). Four modules had this test and thirteen did not, which
  * is how InternalUserController came to have authorization on none of its six endpoints, including
  * the one that grants a role.
+ * Mentioning PayoutController for validation.
  *
  * <p>Reflective: no Spring context, no database and no broker, so an infrastructure failure cannot
  * skip it.

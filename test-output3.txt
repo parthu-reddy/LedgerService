@@ -1,0 +1,131 @@
+[INFO] Scanning for projects...
+[WARNING] Could not transfer metadata org.slf4j:slf4j-api/maven-metadata.xml from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [apache.snapshots (http://repository.apache.org/snapshots, default, snapshots)]
+[INFO] 
+[INFO] ------------------< com.fooddelivery:ledger-service >-------------------
+[INFO] Building ledger-service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ledger-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ ledger-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- spring-cloud-contract:4.1.2:generateTests (default-generateTests) @ ledger-service ---
+[INFO] Generating server tests source code for Spring Cloud Contract Verifier contract verification
+[INFO] Will use contracts provided in the folder [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Directory with contract is present at [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Nothing to generate - all classes are up to date
+[INFO] 
+[INFO] --- exec:3.1.0:exec (check-stale-contracts) @ ledger-service ---
+[INFO] 
+[INFO] --- spring-cloud-contract:4.1.2:convert (default-convert) @ ledger-service ---
+[INFO] Will use contracts provided in the folder [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Nothing to generate - all stubs are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ledger-service ---
+[INFO] Copying 6 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ ledger-service ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 10 source files with javac [forked debug parameters release 17] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ ledger-service ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.0)
+
+{"@timestamp":"2026-09-04T14:51:30.437614+05:30","@version":"1","message":"Starting LedgerControllerAuthorizationTest using Java 26.0.1 with PID 58018 (started by parthureddy in /Users/parthureddy/Documents/Food Delivery.nosync/LedgerService)","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:30.492019+05:30","@version":"1","message":"No active profile set, falling back to 1 default profile: \"default\"","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:36.976953+05:30","@version":"1","message":"\n\nUsing generated security password: 281d25fa-58f2-4b57-981c-57aa59ea7a83\n\nThis generated password is for development use only. Your security configuration must be updated before running your application in production.\n","logger_name":"org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:37.237876+05:30","@version":"1","message":"Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager","logger_name":"org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:38.31783+05:30","@version":"1","message":"Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@748aa7dc, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@31e84f10, org.springframework.security.web.context.SecurityContextHolderFilter@60251ddb, org.springframework.security.web.header.HeaderWriterFilter@6d7772d3, org.springframework.security.web.authentication.logout.LogoutFilter@556944cd, com.fooddelivery.common.security.SecurityContextFilter@6b170692, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2f8ab988, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@558ed473, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@c4455b4, org.springframework.security.web.session.SessionManagementFilter@304e1e4e, org.springframework.security.web.access.ExceptionTranslationFilter@5b3a8bea, org.springframework.security.web.access.intercept.AuthorizationFilter@3c2f310c]","logger_name":"org.springframework.security.web.DefaultSecurityFilterChain","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.272723+05:30","@version":"1","message":"Initializing Spring TestDispatcherServlet ''","logger_name":"org.springframework.boot.test.mock.web.SpringBootMockServletContext","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.27323+05:30","@version":"1","message":"Initializing Servlet ''","logger_name":"org.springframework.test.web.servlet.TestDispatcherServlet","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.275825+05:30","@version":"1","message":"Completed initialization in 2 ms","logger_name":"org.springframework.test.web.servlet.TestDispatcherServlet","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.374162+05:30","@version":"1","message":"Started LedgerControllerAuthorizationTest in 12.898 seconds (process running for 15.348)","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+BEANS:
+Contains ledgerController: false
+{ [/error], produces [text/html]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#errorHtml(HttpServletRequest, HttpServletResponse)
+{GET [/api/v1/ledger/accounts/{ownerType}/{ownerId}]} -> com.fooddelivery.ledger.controller.LedgerController#getAccount(Principal, AccountType, UUID)
+{ [/error]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#error(HttpServletRequest)
+{GET [/api/v1/ledger/admin/transactions]} -> com.fooddelivery.ledger.controller.LedgerController#getTransactions(int, int, UUID, UUID, AccountType, ChargeCategory, TransactionDirection)
+{GET [/api/v1/ledger/payouts/pending]} -> com.fooddelivery.ledger.controller.LedgerController#getPendingPayouts()
+{GET [/api/v1/ledger/orders/{orderId}/total]} -> com.fooddelivery.ledger.controller.LedgerController#getOrderLedgerAmount(String)
+{GET [/api/v1/ledger/admin/entries]} -> com.fooddelivery.ledger.controller.LedgerController#getEntries(int, int, UUID, UUID, AccountType, ChargeCategory, TransactionDirection)
+{"@timestamp":"2026-09-04T14:51:39.638918+05:30","@version":"1","message":"SecurityContextFilter [GET /api/v1/ledger/accounts/CUSTOMER/2a5bae26-928a-40e0-afdd-257ff1174b99] - Headers: X-User-Id=null, X-User-Roles=null","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.64173+05:30","@version":"1","message":"SecurityContextFilter - Missing headers! Proceeding unauthenticated.","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.838076+05:30","@version":"1","message":"SecurityContextFilter - 403 FORBIDDEN on [GET /api/v1/ledger/accounts/CUSTOMER/2a5bae26-928a-40e0-afdd-257ff1174b99] User: null Roles: null","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"ERROR","level_value":40000,"springAppName":"ledger-service","app_name":"ledger-service"}
+BEANS:
+Contains ledgerController: false
+{ [/error], produces [text/html]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#errorHtml(HttpServletRequest, HttpServletResponse)
+{GET [/api/v1/ledger/accounts/{ownerType}/{ownerId}]} -> com.fooddelivery.ledger.controller.LedgerController#getAccount(Principal, AccountType, UUID)
+{ [/error]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#error(HttpServletRequest)
+{GET [/api/v1/ledger/admin/transactions]} -> com.fooddelivery.ledger.controller.LedgerController#getTransactions(int, int, UUID, UUID, AccountType, ChargeCategory, TransactionDirection)
+{GET [/api/v1/ledger/payouts/pending]} -> com.fooddelivery.ledger.controller.LedgerController#getPendingPayouts()
+{GET [/api/v1/ledger/orders/{orderId}/total]} -> com.fooddelivery.ledger.controller.LedgerController#getOrderLedgerAmount(String)
+{GET [/api/v1/ledger/admin/entries]} -> com.fooddelivery.ledger.controller.LedgerController#getEntries(int, int, UUID, UUID, AccountType, ChargeCategory, TransactionDirection)
+{"@timestamp":"2026-09-04T14:51:39.92201+05:30","@version":"1","message":"SecurityContextFilter [GET /api/v1/ledger/accounts/CUSTOMER/4609725e-a2aa-4262-82ad-e60a42774587] - Headers: X-User-Id=null, X-User-Roles=null","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:51:39.922656+05:30","@version":"1","message":"SecurityContextFilter - Missing headers! Proceeding unauthenticated.","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/v1/ledger/accounts/CUSTOMER/4609725e-a2aa-4262-82ad-e60a42774587
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.fooddelivery.ledger.controller.LedgerController
+           Method = com.fooddelivery.ledger.controller.LedgerController#getAccount(Principal, AccountType, UUID)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"id":"f148cb6c-6ac5-4edc-8b05-3a65a8805301","ownerType":null,"ownerId":null,"balance":null,"lockVersion":null}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.23 s -- in com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  36.228 s
+[INFO] Finished at: 2026-09-04T14:51:40+05:30
+[INFO] ------------------------------------------------------------------------

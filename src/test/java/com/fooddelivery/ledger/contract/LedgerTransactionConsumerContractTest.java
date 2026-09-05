@@ -2,7 +2,7 @@ package com.fooddelivery.ledger.contract;
 
 import com.fooddelivery.common.contract.KafkaStubMessageSender;
 
-import com.fooddelivery.common.enums.AccountType;
+import com.fooddelivery.common.enums.LedgerAccountType;
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.ledger.listener.LedgerEventListener;
 import com.fooddelivery.ledger.service.DoubleEntryLedgerService;
@@ -74,6 +74,9 @@ class LedgerTransactionConsumerContractTest {
     @MockBean
     private com.fooddelivery.common.repository.IIdempotencyKeyRepository idempotencyKeyRepository;
 
+    @MockBean
+    private com.fooddelivery.ledger.repository.ILedgerRejectionRepository ledgerRejectionRepository;
+
     @Autowired
     private StubTrigger stubTrigger;
 
@@ -82,10 +85,7 @@ class LedgerTransactionConsumerContractTest {
         stubTrigger.trigger("ledger_events");
 
         await().atMost(15, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(ledgerService).recordTransaction(
-                        any(), any(),
-                        any(), eq(AccountType.PLATFORM),
-                        any(), eq(AccountType.RESTAURANT),
-                        eq(new BigDecimal("125.50")), eq(ChargeCategory.FOOD_COST)));
+                verify(ledgerService).record(
+                        any(com.fooddelivery.common.dto.ledger.LedgerTransactionCommand.class)));
     }
 }

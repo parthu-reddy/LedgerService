@@ -33,6 +33,12 @@ public class MockRequestTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.common.service.RateLimitingService rateLimitingService;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.client.RestaurantBeneficiaryFeignClient restaurantBeneficiaryFeignClient;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.client.DriverBeneficiaryFeignClient driverBeneficiaryFeignClient;
+
     @Autowired
     private MockMvc mockMvc;
 

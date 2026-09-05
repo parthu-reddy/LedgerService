@@ -1,6 +1,6 @@
 package com.fooddelivery.ledger.service;
 
-import com.fooddelivery.common.enums.AccountType;
+import com.fooddelivery.common.enums.LedgerAccountType;
 import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.common.enums.TransactionDirection;
 import com.fooddelivery.ledger.entity.LedgerAccount;
@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,16 +75,19 @@ class DoubleEntryLedgerServiceOrderTotalTest {
 
     @BeforeEach
     void createAccounts() {
-        platformAccountId = saveAccount(PLATFORM_OWNER, AccountType.PLATFORM);
-        customerAccountId = saveAccount(CUSTOMER_OWNER, AccountType.CUSTOMER);
+        platformAccountId = saveAccount(PLATFORM_OWNER, LedgerAccountType.PLATFORM_CLEARING);
+        customerAccountId = saveAccount(CUSTOMER_OWNER, LedgerAccountType.CUSTOMER_CREDIT);
     }
 
-    private UUID saveAccount(UUID ownerId, AccountType ownerType) {
+    private UUID saveAccount(UUID ownerId, LedgerAccountType ownerType) {
         LedgerAccount account = LedgerAccount.builder()
                 .id(UUID.randomUUID())
                 .ownerId(ownerId)
                 .ownerType(ownerType)
                 .balance(new BigDecimal("10000.00"))
+                .currency("INR")
+                .createdAt(java.time.OffsetDateTime.now())
+                .kind(com.fooddelivery.common.enums.LedgerAccountType.Kind.PAYABLE)
                 .lockVersion(0)
                 .build();
         return accountRepository.save(account).getId();
@@ -100,7 +103,8 @@ class DoubleEntryLedgerServiceOrderTotalTest {
                 .direction(direction)
                 .category(category)
                 .amount(new BigDecimal(amount))
-                .createdAt(LocalDateTime.now())
+                .createdAt(OffsetDateTime.now())
+                .producer("TEST_PRODUCER")
                 .build());
     }
 
@@ -143,7 +147,7 @@ class DoubleEntryLedgerServiceOrderTotalTest {
         UUID orderRef = UUID.randomUUID();
         customerPaysPlatform(orderRef, "100.50", ChargeCategory.FOOD_COST);
         customerPaysPlatform(orderRef, "30.00", ChargeCategory.DELIVERY_FEE);
-        customerPaysPlatform(orderRef, "19.50", ChargeCategory.TAX);
+        customerPaysPlatform(orderRef, "19.50", ChargeCategory.SGST);
 
         assertThat(ledgerService.getOrderLedgerTotal(orderRef))
                 .usingComparator(BigDecimal::compareTo)

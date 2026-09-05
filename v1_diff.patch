@@ -1,0 +1,84 @@
+diff --git a/src/main/resources/db/migration/V1__init_ledger.sql b/src/main/resources/db/migration/V1__init_ledger.sql
+index b8d6ce3..c3a8f3e 100644
+--- a/src/main/resources/db/migration/V1__init_ledger.sql
++++ b/src/main/resources/db/migration/V1__init_ledger.sql
+@@ -1,48 +1,43 @@
+ CREATE TABLE ledger_accounts (
+     id UUID PRIMARY KEY,
++    owner_type VARCHAR(40) NOT NULL,
+     owner_id UUID NOT NULL,
+-    owner_type VARCHAR(50) NOT NULL,
+-    balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
++    kind VARCHAR(16) NOT NULL,
++    balance NUMERIC(14,2) NOT NULL DEFAULT 0,
++    currency CHAR(3) NOT NULL DEFAULT 'INR',
+     lock_version INT NOT NULL DEFAULT 0,
+-    CONSTRAINT unique_owner UNIQUE (owner_id, owner_type)
++    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
++    UNIQUE(owner_type, owner_id)
+ );
+ 
+ CREATE TABLE ledger_entries (
+     id UUID PRIMARY KEY,
+     transaction_id UUID NOT NULL,
+-    account_id UUID NOT NULL,
+-    direction VARCHAR(10) NOT NULL,
+-    amount DECIMAL(15,2) NOT NULL,
+-    created_at TIMESTAMP NOT NULL,
+-    CONSTRAINT fk_ledger_entries_account FOREIGN KEY (account_id) REFERENCES ledger_accounts(id),
+-    category VARCHAR(50) NOT NULL,
+-    CONSTRAINT unique_transaction_direction UNIQUE (transaction_id, direction),
+-    reference_id UUID
++    reference_id UUID NOT NULL,
++    account_id UUID NOT NULL REFERENCES ledger_accounts,
++    direction VARCHAR(6) NOT NULL,
++    category VARCHAR(40) NOT NULL,
++    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
++    producer VARCHAR(64) NOT NULL,
++    description VARCHAR(255),
++    authorized_by VARCHAR(64),
++    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
++    UNIQUE(transaction_id, account_id, direction)
+ );
+ 
+-CREATE TABLE failed_deferred_updates (
++CREATE TABLE ledger_rejections (
+     id UUID PRIMARY KEY,
+-    account_id UUID NOT NULL,
+-    amount DECIMAL NOT NULL,
+-    created_at TIMESTAMP NOT NULL,
+-    error_reason VARCHAR(1000),
+-    resolved BOOLEAN NOT NULL DEFAULT FALSE
++    event_id VARCHAR(255),
++    producer VARCHAR(64),
++    payload JSONB NOT NULL,
++    reason VARCHAR(1000) NOT NULL,
++    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
++    resolved_at TIMESTAMPTZ,
++    resolved_by VARCHAR(64),
++    resolution_note VARCHAR(1000)
+ );
+ 
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-CREATE INDEX idx_ledger_entries_tx ON ledger_entries(transaction_id);
+-
+-CREATE INDEX idx_ledger_entries_reference_id ON ledger_entries(reference_id);
+-
+-CREATE INDEX idx_ledger_entries_account_id ON ledger_entries(account_id);
+-
+-CREATE INDEX idx_ledger_entries_created_at ON ledger_entries(created_at);
+\ No newline at end of file
++CREATE INDEX idx_entries_reference_id ON ledger_entries(reference_id);
++CREATE INDEX idx_entries_account_created ON ledger_entries(account_id, created_at);
++CREATE INDEX idx_entries_transaction_id ON ledger_entries(transaction_id);
++CREATE INDEX idx_rejections_resolved_at ON ledger_rejections(resolved_at);
+\ No newline at end of file

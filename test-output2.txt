@@ -1,0 +1,228 @@
+[INFO] Scanning for projects...
+[WARNING] Could not transfer metadata org.slf4j:slf4j-api/maven-metadata.xml from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [apache.snapshots (http://repository.apache.org/snapshots, default, snapshots)]
+[INFO] 
+[INFO] ------------------< com.fooddelivery:ledger-service >-------------------
+[INFO] Building ledger-service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ledger-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ ledger-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- spring-cloud-contract:4.1.2:generateTests (default-generateTests) @ ledger-service ---
+[INFO] Generating server tests source code for Spring Cloud Contract Verifier contract verification
+[INFO] Will use contracts provided in the folder [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Directory with contract is present at [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Nothing to generate - all classes are up to date
+[INFO] 
+[INFO] --- exec:3.1.0:exec (check-stale-contracts) @ ledger-service ---
+[INFO] 
+[INFO] --- spring-cloud-contract:4.1.2:convert (default-convert) @ ledger-service ---
+[INFO] Will use contracts provided in the folder [/Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/src/test/resources/contracts]
+[INFO] Nothing to generate - all stubs are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ledger-service ---
+[INFO] Copying 6 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ ledger-service ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 10 source files with javac [forked debug parameters release 17] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ ledger-service ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.0)
+
+{"@timestamp":"2026-09-04T14:50:26.225695+05:30","@version":"1","message":"Starting LedgerControllerAuthorizationTest using Java 26.0.1 with PID 57845 (started by parthureddy in /Users/parthureddy/Documents/Food Delivery.nosync/LedgerService)","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:26.257676+05:30","@version":"1","message":"No active profile set, falling back to 1 default profile: \"default\"","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:31.355755+05:30","@version":"1","message":"\n\nUsing generated security password: 57da7aab-e533-4766-a959-c6a99873fa28\n\nThis generated password is for development use only. Your security configuration must be updated before running your application in production.\n","logger_name":"org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:31.529473+05:30","@version":"1","message":"Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager","logger_name":"org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:32.970683+05:30","@version":"1","message":"Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5d67bf4d, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@31de8099, org.springframework.security.web.context.SecurityContextHolderFilter@7ea8224b, org.springframework.security.web.header.HeaderWriterFilter@35d8ba22, org.springframework.security.web.authentication.logout.LogoutFilter@4880a9d, com.fooddelivery.common.security.SecurityContextFilter@3163e03b, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@623ded82, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@15c3585, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@40d04cf8, org.springframework.security.web.session.SessionManagementFilter@5eff5e4c, org.springframework.security.web.access.ExceptionTranslationFilter@9715d26, org.springframework.security.web.access.intercept.AuthorizationFilter@2119b989]","logger_name":"org.springframework.security.web.DefaultSecurityFilterChain","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.169353+05:30","@version":"1","message":"Initializing Spring TestDispatcherServlet ''","logger_name":"org.springframework.boot.test.mock.web.SpringBootMockServletContext","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.170071+05:30","@version":"1","message":"Initializing Servlet ''","logger_name":"org.springframework.test.web.servlet.TestDispatcherServlet","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.173801+05:30","@version":"1","message":"Completed initialization in 3 ms","logger_name":"org.springframework.test.web.servlet.TestDispatcherServlet","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.255345+05:30","@version":"1","message":"Started LedgerControllerAuthorizationTest in 11.379 seconds (process running for 13.758)","logger_name":"com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+BEANS:
+Contains ledgerController: false
+{ [/error], produces [text/html]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#errorHtml(HttpServletRequest, HttpServletResponse)
+{ [/error]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#error(HttpServletRequest)
+{"@timestamp":"2026-09-04T14:50:35.520954+05:30","@version":"1","message":"SecurityContextFilter [GET /api/v1/ledger/accounts/CUSTOMER/4d2eedec-89d8-43ef-b9e7-baf527e17377] - Headers: X-User-Id=null, X-User-Roles=null","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.523418+05:30","@version":"1","message":"SecurityContextFilter - Missing headers! Proceeding unauthenticated.","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/v1/ledger/accounts/CUSTOMER/4d2eedec-89d8-43ef-b9e7-baf527e17377
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = No static resource api/v1/ledger/accounts/CUSTOMER/4d2eedec-89d8-43ef-b9e7-baf527e17377.
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+BEANS:
+Contains ledgerController: false
+{ [/error], produces [text/html]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#errorHtml(HttpServletRequest, HttpServletResponse)
+{ [/error]} -> org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController#error(HttpServletRequest)
+{"@timestamp":"2026-09-04T14:50:35.654891+05:30","@version":"1","message":"SecurityContextFilter [GET /api/v1/ledger/accounts/CUSTOMER/50666702-35fe-401f-8d14-4e28d85b2032] - Headers: X-User-Id=null, X-User-Roles=null","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"INFO","level_value":20000,"springAppName":"ledger-service","app_name":"ledger-service"}
+{"@timestamp":"2026-09-04T14:50:35.65533+05:30","@version":"1","message":"SecurityContextFilter - Missing headers! Proceeding unauthenticated.","logger_name":"com.fooddelivery.common.security.SecurityContextFilter","thread_name":"main","level":"WARN","level_value":30000,"springAppName":"ledger-service","app_name":"ledger-service"}
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/v1/ledger/accounts/CUSTOMER/50666702-35fe-401f-8d14-4e28d85b2032
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = No static resource api/v1/ledger/accounts/CUSTOMER/50666702-35fe-401f-8d14-4e28d85b2032.
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /api/v1/ledger/accounts/CUSTOMER/50666702-35fe-401f-8d14-4e28d85b2032
+       Parameters = {}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = org.springframework.web.servlet.resource.ResourceHttpRequestHandler
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = org.springframework.web.servlet.resource.NoResourceFoundException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 404
+    Error message = No static resource api/v1/ledger/accounts/CUSTOMER/50666702-35fe-401f-8d14-4e28d85b2032.
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = null
+             Body = 
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 12.35 s <<< FAILURE! -- in com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest
+[ERROR] com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest.getAccount_Forbidden_WhenPolicyDenies -- Time elapsed: 0.318 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<403> but was:<404>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest.getAccount_Forbidden_WhenPolicyDenies(LedgerControllerAuthorizationTest.java:96)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+
+[ERROR] com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest.getAccount_Allowed_WhenPolicyAllows -- Time elapsed: 0.036 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<404>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.fooddelivery.ledger.controller.LedgerControllerAuthorizationTest.getAccount_Allowed_WhenPolicyAllows(LedgerControllerAuthorizationTest.java:86)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1612)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   LedgerControllerAuthorizationTest.getAccount_Allowed_WhenPolicyAllows:86 Status expected:<200> but was:<404>
+[ERROR]   LedgerControllerAuthorizationTest.getAccount_Forbidden_WhenPolicyDenies:96 Status expected:<403> but was:<404>
+[INFO] 
+[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  34.930 s
+[INFO] Finished at: 2026-09-04T14:50:35+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project ledger-service: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /Users/parthureddy/Documents/Food Delivery.nosync/LedgerService/target/surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
