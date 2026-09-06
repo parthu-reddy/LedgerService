@@ -9,15 +9,73 @@
     "description" : "Generated server url"
   } ],
   "paths" : {
-    "/api/v1/ledger/payouts/settle" : {
+    "/api/v1/admin/payouts" : {
+      "get" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "getPayouts",
+        "parameters" : [ {
+          "name" : "payeeType",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "payeeId",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagePayout"
+                }
+              }
+            }
+          }
+        }
+      },
       "post" : {
-        "tags" : [ "ledger-controller" ],
-        "operationId" : "settlePayout",
+        "tags" : [ "payout-controller" ],
+        "operationId" : "createPayout",
+        "parameters" : [ {
+          "name" : "Idempotency-Key",
+          "in" : "header",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/PayoutSettlementRequest"
+                "$ref" : "#/components/schemas/CreatePayoutRequest"
               }
             }
           },
@@ -29,10 +87,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "string"
-                  }
+                  "$ref" : "#/components/schemas/Payout"
                 }
               }
             }
@@ -40,10 +95,217 @@
         }
       }
     },
-    "/api/v1/ledger/payouts/pending" : {
+    "/api/v1/admin/payouts/{payoutId}/mark-paid" : {
+      "post" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "markPayoutPaid",
+        "parameters" : [ {
+          "name" : "payoutId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "bankReference",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payoutId}/fail" : {
+      "post" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "failPayout",
+        "parameters" : [ {
+          "name" : "payoutId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "reason",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payoutId}/cancel" : {
+      "post" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "cancelPayout",
+        "parameters" : [ {
+          "name" : "payoutId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payoutId}/approve" : {
+      "post" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "approvePayout",
+        "parameters" : [ {
+          "name" : "payoutId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/cash/remit" : {
+      "post" : {
+        "tags" : [ "cash-controller" ],
+        "operationId" : "remitCash",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CashRemittanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CashRemittance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/statements/{ownerType}/{ownerId}" : {
       "get" : {
-        "tags" : [ "ledger-controller" ],
-        "operationId" : "getPendingPayouts",
+        "tags" : [ "ledger-statement-controller" ],
+        "operationId" : "getStatement",
+        "parameters" : [ {
+          "name" : "ownerType",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+          }
+        }, {
+          "name" : "ownerId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "settled",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageLedgerStatementLineDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/statements/references/{referenceId}" : {
+      "get" : {
+        "tags" : [ "ledger-statement-controller" ],
+        "operationId" : "getStatementByReference",
+        "parameters" : [ {
+          "name" : "referenceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -52,7 +314,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/LedgerAccount"
+                    "$ref" : "#/components/schemas/LedgerStatementLineDto"
                   }
                 }
               }
@@ -131,7 +393,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "PLATFORM", "RESTAURANT", "DRIVER", "ADVERTISER_WALLET", "GOVERNMENT" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "category",
@@ -139,7 +401,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "TIP", "PACKAGING_FEE", "SURGE_PRICING", "TAX", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "PAYOUT", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "AD_REVENUE" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
           }
         }, {
           "name" : "direction",
@@ -156,7 +418,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageLedgerTransactionDto"
+                  "$ref" : "#/components/schemas/ApiResponsePageResponseDtoLedgerTransactionDto"
                 }
               }
             }
@@ -208,7 +470,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "PLATFORM", "RESTAURANT", "DRIVER", "ADVERTISER_WALLET", "GOVERNMENT" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "category",
@@ -216,7 +478,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "TIP", "PACKAGING_FEE", "SURGE_PRICING", "TAX", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "PAYOUT", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "AD_REVENUE" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
           }
         }, {
           "name" : "direction",
@@ -233,7 +495,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PageLedgerEntry"
+                  "$ref" : "#/components/schemas/ApiResponsePageResponseDtoLedgerEntry"
                 }
               }
             }
@@ -251,7 +513,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "PLATFORM", "RESTAURANT", "DRIVER", "ADVERTISER_WALLET", "GOVERNMENT" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "ownerId",
@@ -275,82 +537,295 @@
           }
         }
       }
+    },
+    "/api/v1/admin/payouts/{payoutId}" : {
+      "get" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "getPayout",
+        "parameters" : [ {
+          "name" : "payoutId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Payout"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/pending" : {
+      "get" : {
+        "tags" : [ "payout-controller" ],
+        "operationId" : "getPendingPayouts",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PendingPayoutResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/cash/drivers/{driverId}" : {
+      "get" : {
+        "tags" : [ "cash-controller" ],
+        "operationId" : "getCashByDriver",
+        "parameters" : [ {
+          "name" : "driverId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageCashRemittance"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
     "schemas" : {
-      "PayoutSettlementRequest" : {
-        "required" : [ "amount", "ownerId", "ownerType" ],
+      "CreatePayoutRequest" : {
         "type" : "object",
         "properties" : {
-          "ownerId" : {
+          "payeeType" : {
+            "type" : "string"
+          },
+          "payeeId" : {
             "type" : "string",
             "format" : "uuid"
           },
-          "ownerType" : {
+          "periodTo" : {
             "type" : "string",
-            "enum" : [ "CUSTOMER", "PLATFORM", "RESTAURANT", "DRIVER", "ADVERTISER_WALLET", "GOVERNMENT" ]
+            "format" : "date-time"
           },
-          "amount" : {
-            "type" : "number"
+          "force" : {
+            "type" : "boolean"
           }
         }
       },
-      "LedgerAccount" : {
-        "required" : [ "balance", "id", "lockVersion", "ownerId", "ownerType" ],
+      "Payout" : {
         "type" : "object",
         "properties" : {
           "id" : {
             "type" : "string",
             "format" : "uuid"
           },
-          "ownerType" : {
-            "type" : "string",
-            "enum" : [ "CUSTOMER", "PLATFORM", "RESTAURANT", "DRIVER", "ADVERTISER_WALLET", "GOVERNMENT" ]
+          "payeeType" : {
+            "type" : "string"
           },
-          "ownerId" : {
+          "payeeId" : {
             "type" : "string",
             "format" : "uuid"
           },
-          "balance" : {
+          "payeeDisplayName" : {
+            "type" : "string"
+          },
+          "periodFrom" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodTo" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "amount" : {
             "type" : "number"
           },
-          "lockVersion" : {
-            "type" : "integer",
-            "format" : "int32"
+          "currency" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "APPROVED", "PAID", "FAILED", "CANCELLED" ]
+          },
+          "beneficiarySnapshot" : {
+            "type" : "string"
+          },
+          "bankReference" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "createdBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "approvedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "paidBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "idempotencyKey" : {
+            "type" : "string"
+          },
+          "ledgerTransactionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "settledTransactionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "paidAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
-      "LedgerTransactionDto" : {
-        "required" : [ "amount", "category", "date", "fromAccountId", "toAccountId", "transactionId" ],
+      "CashRemittanceRequest" : {
         "type" : "object",
         "properties" : {
-          "transactionId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "category" : {
-            "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "TIP", "PACKAGING_FEE", "SURGE_PRICING", "TAX", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "PAYOUT", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "AD_REVENUE" ]
-          },
-          "fromAccountId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "toAccountId" : {
+          "driverId" : {
             "type" : "string",
             "format" : "uuid"
           },
           "amount" : {
             "type" : "number"
           },
-          "date" : {
+          "reference" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CashRemittance" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "driverId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "reference" : {
+            "type" : "string"
+          },
+          "recordedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "ledgerTransactionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "createdAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         }
       },
-      "PageLedgerTransactionDto" : {
+      "LedgerStatementLineDto" : {
+        "type" : "object",
+        "properties" : {
+          "transactionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "referenceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "category" : {
+            "type" : "string",
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "CREDIT", "DEBIT" ]
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "payoutId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "payoutStatus" : {
+            "type" : "string"
+          },
+          "settled" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PageLedgerStatementLineDto" : {
         "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
@@ -369,7 +844,7 @@
           "content" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/LedgerTransactionDto"
+              "$ref" : "#/components/schemas/LedgerStatementLineDto"
             }
           },
           "numberOfElements" : {
@@ -386,11 +861,11 @@
           "last" : {
             "type" : "boolean"
           },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
           "sort" : {
             "$ref" : "#/components/schemas/SortObject"
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "empty" : {
             "type" : "boolean"
@@ -409,15 +884,15 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "paged" : {
             "type" : "boolean"
           },
           "pageNumber" : {
             "type" : "integer",
             "format" : "int32"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
           },
           "unpaged" : {
             "type" : "boolean"
@@ -439,8 +914,121 @@
           }
         }
       },
+      "ApiResponsePageResponseDtoLedgerTransactionDto" : {
+        "required" : [ "message", "success", "timestamp" ],
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "errorCode" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/PageResponseDtoLedgerTransactionDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "LedgerTransactionDto" : {
+        "required" : [ "amount", "category", "date", "fromAccountId", "toAccountId", "transactionId" ],
+        "type" : "object",
+        "properties" : {
+          "transactionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "category" : {
+            "type" : "string",
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+          },
+          "fromAccountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "toAccountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageResponseDtoLedgerTransactionDto" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LedgerTransactionDto"
+            }
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "last" : {
+            "type" : "boolean"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "empty" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ApiResponsePageResponseDtoLedgerEntry" : {
+        "required" : [ "message", "success", "timestamp" ],
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "errorCode" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/PageResponseDtoLedgerEntry"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "LedgerEntry" : {
-        "required" : [ "accountId", "amount", "category", "createdAt", "direction", "id", "transactionId" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -465,10 +1053,19 @@
           },
           "category" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "TIP", "PACKAGING_FEE", "SURGE_PRICING", "TAX", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "PAYOUT", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "AD_REVENUE" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
           },
           "amount" : {
             "type" : "number"
+          },
+          "producer" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "authorizedBy" : {
+            "type" : "string"
           },
           "createdAt" : {
             "type" : "string",
@@ -476,7 +1073,83 @@
           }
         }
       },
-      "PageLedgerEntry" : {
+      "PageResponseDtoLedgerEntry" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LedgerEntry"
+            }
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "last" : {
+            "type" : "boolean"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "empty" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "LedgerAccount" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "ownerType" : {
+            "type" : "string",
+            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+          },
+          "ownerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "EXTERNAL", "INTERNAL", "PAYABLE", "PREPAID" ]
+          },
+          "balance" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "lockVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PagePayout" : {
         "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
         "type" : "object",
         "properties" : {
@@ -495,7 +1168,7 @@
           "content" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/LedgerEntry"
+              "$ref" : "#/components/schemas/Payout"
             }
           },
           "numberOfElements" : {
@@ -512,11 +1185,110 @@
           "last" : {
             "type" : "boolean"
           },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
+          "empty" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "BeneficiaryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "ifsc" : {
+            "type" : "string"
+          },
+          "beneficiaryName" : {
+            "type" : "string"
+          },
+          "verified" : {
+            "type" : "boolean"
+          },
+          "source" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PendingPayoutResponse" : {
+        "type" : "object",
+        "properties" : {
+          "payeeType" : {
+            "type" : "string"
+          },
+          "payeeId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "unsettledAmount" : {
+            "type" : "number"
+          },
+          "unsettledSince" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lineCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lastPayout" : {
+            "$ref" : "#/components/schemas/Payout"
+          },
+          "beneficiaryStatus" : {
+            "$ref" : "#/components/schemas/BeneficiaryResponse"
+          }
+        }
+      },
+      "PageCashRemittance" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CashRemittance"
+            }
+          },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "last" : {
+            "type" : "boolean"
+          },
           "sort" : {
             "$ref" : "#/components/schemas/SortObject"
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "empty" : {
             "type" : "boolean"

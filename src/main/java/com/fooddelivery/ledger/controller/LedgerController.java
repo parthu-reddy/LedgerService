@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.security.Principal;
 import java.util.UUID;
+import com.fooddelivery.common.dto.ApiResponse;
 
 @RestController
 @RequestMapping("/api/v1/ledger")
@@ -82,18 +83,22 @@ public class LedgerController {
 
     @PreAuthorize("hasRole(\'ADMIN\')")
     @GetMapping("/admin/entries")
-    public ResponseEntity<org.springframework.data.domain.Page<com.fooddelivery.ledger.entity.LedgerEntry>> getEntries(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
+    public ResponseEntity<ApiResponse<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.entity.LedgerEntry>>> getEntries(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
         org.springframework.data.domain.Page<com.fooddelivery.ledger.entity.LedgerEntry> entries = ledgerService.getEntries(transactionId, ownerId, ownerType, category, direction, pageable);
-        return ResponseEntity.ok(entries);
+        
+        com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.entity.LedgerEntry> pageResponse = com.fooddelivery.common.dto.PageResponseDto.of(entries);
+        return ResponseEntity.ok(ApiResponse.success(pageResponse, "Ledger entries retrieved"));
     }
 
     @PreAuthorize("hasRole(\'ADMIN\')")
     @GetMapping("/admin/transactions")
-    public ResponseEntity<org.springframework.data.domain.Page<com.fooddelivery.ledger.dto.LedgerTransactionDto>> getTransactions(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
+    public ResponseEntity<ApiResponse<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.dto.LedgerTransactionDto>>> getTransactions(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
         org.springframework.data.domain.Page<com.fooddelivery.ledger.dto.LedgerTransactionDto> transactions = ledgerService.getTransactions(transactionId, ownerId, ownerType, category, direction, pageable);
-        return ResponseEntity.ok(transactions);
+        
+        com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.dto.LedgerTransactionDto> pageResponse = com.fooddelivery.common.dto.PageResponseDto.of(transactions);
+        return ResponseEntity.ok(ApiResponse.success(pageResponse, "Ledger transactions retrieved"));
     }
 
     @java.lang.SuppressWarnings("all")
