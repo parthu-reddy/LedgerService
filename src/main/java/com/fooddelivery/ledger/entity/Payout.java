@@ -46,7 +46,7 @@ public class Payout {
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "currency", nullable = false, length = 3)
+    @Column(name = "currency", nullable = false, length = 3, columnDefinition = "CHAR(3)")
     @Builder.Default
     private String currency = "INR";
 
