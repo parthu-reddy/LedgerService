@@ -14,6 +14,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/ledger/admin/reconciliation")
 @RequiredArgsConstructor
+
+
+
 public class ReconciliationController {
 
     private final ReconciliationRunRepository runRepository;
@@ -26,9 +29,24 @@ public class ReconciliationController {
         return runRepository.findAll(pageable);
     }
 
-    @GetMapping("/breaks")
+    @GetMapping("/runs/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ReconciliationRun getRun(@PathVariable UUID id) {
+        return runRepository.findById(id).orElseThrow();
+    }
+
+    @PostMapping("/runs/{id}/execute")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ReconciliationRun executeRun(@PathVariable UUID id, @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        // According to original code, it triggers a run for a date. 
+        // Here we can fetch the run if needed, but since the service takes a date, we just pass the date or a default date
+        return reconciliationService.executeRun(date != null ? date : LocalDate.now());
+    }
+
+    @GetMapping("/runs/{id}/breaks")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<ReconciliationBreak> getBreaks(
+            @PathVariable UUID id,
             @RequestParam(required = false) BreakKind kind,
             @RequestParam(required = false) Boolean resolved,
             Pageable pageable) {
@@ -44,7 +62,7 @@ public class ReconciliationController {
         return breakRepository.findAll(pageable);
     }
 
-    @PostMapping("/breaks/{id}/resolve")
+    @PostMapping("/runs/{id}/resolve-breaks")
     @PreAuthorize("hasRole('ADMIN')")
     public void resolveBreak(@PathVariable UUID id, @RequestBody ResolveBreakRequest request) {
         ReconciliationBreak rBreak = breakRepository.findById(id).orElseThrow();
@@ -52,12 +70,6 @@ public class ReconciliationController {
         rBreak.setResolvedBy(request.getResolvedBy());
         rBreak.setNote(request.getNote());
         breakRepository.save(rBreak);
-    }
-
-    @PostMapping("/run")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ReconciliationRun triggerRun(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return reconciliationService.executeRun(date);
     }
 }
 

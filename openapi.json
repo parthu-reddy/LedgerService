@@ -9,6 +9,71 @@
     "description" : "Generated server url"
   } ],
   "paths" : {
+    "/api/v1/ledger/admin/reconciliation/runs/{id}/resolve-breaks" : {
+      "post" : {
+        "tags" : [ "reconciliation-controller" ],
+        "operationId" : "resolveBreak",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResolveBreakRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/admin/reconciliation/runs/{id}/execute" : {
+      "post" : {
+        "tags" : [ "reconciliation-controller" ],
+        "operationId" : "executeRun",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "date",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReconciliationRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/payouts" : {
       "get" : {
         "tags" : [ "payout-controller" ],
@@ -426,6 +491,108 @@
         }
       }
     },
+    "/api/v1/ledger/admin/reconciliation/runs" : {
+      "get" : {
+        "tags" : [ "reconciliation-controller" ],
+        "operationId" : "getRuns",
+        "parameters" : [ {
+          "name" : "pageable",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageReconciliationRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/admin/reconciliation/runs/{id}" : {
+      "get" : {
+        "tags" : [ "reconciliation-controller" ],
+        "operationId" : "getRun",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReconciliationRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/admin/reconciliation/runs/{id}/breaks" : {
+      "get" : {
+        "tags" : [ "reconciliation-controller" ],
+        "operationId" : "getBreaks",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "kind",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "GATEWAY_VS_LEDGER", "ORDERS_VS_CLEARING", "WALLET_VS_LEDGER", "PAYABLE_VS_ORDERS", "DOUBLE_ENTRY", "STUCK" ]
+          }
+        }, {
+          "name" : "resolved",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "name" : "pageable",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageReconciliationBreak"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ledger/admin/entries" : {
       "get" : {
         "tags" : [ "ledger-controller" ],
@@ -634,6 +801,41 @@
   },
   "components" : {
     "schemas" : {
+      "ResolveBreakRequest" : {
+        "type" : "object",
+        "properties" : {
+          "resolvedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "note" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ReconciliationRun" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "finishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          }
+        }
+      },
       "CreatePayoutRequest" : {
         "type" : "object",
         "properties" : {
@@ -1006,6 +1208,162 @@
           }
         }
       },
+      "Pageable" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "minimum" : 0,
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "minimum" : 1,
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          }
+        }
+      },
+      "PageReconciliationRun" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReconciliationRun"
+            }
+          },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "last" : {
+            "type" : "boolean"
+          },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
+          },
+          "empty" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PageReconciliationBreak" : {
+        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
+        "type" : "object",
+        "properties" : {
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReconciliationBreak"
+            }
+          },
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "first" : {
+            "type" : "boolean"
+          },
+          "last" : {
+            "type" : "boolean"
+          },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
+          },
+          "empty" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ReconciliationBreak" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "runId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "GATEWAY_VS_LEDGER", "ORDERS_VS_CLEARING", "WALLET_VS_LEDGER", "PAYABLE_VS_ORDERS", "DOUBLE_ENTRY", "STUCK" ]
+          },
+          "subjectType" : {
+            "type" : "string"
+          },
+          "subjectId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "expected" : {
+            "type" : "number"
+          },
+          "actual" : {
+            "type" : "number"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "resolvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "resolvedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "note" : {
+            "type" : "string"
+          }
+        }
+      },
       "ApiResponsePageResponseDtoLedgerEntry" : {
         "required" : [ "message", "success", "timestamp" ],
         "type" : "object",
@@ -1029,6 +1387,7 @@
         }
       },
       "LedgerEntry" : {
+        "required" : [ "accountId", "amount", "category", "createdAt", "direction", "id", "transactionId" ],
         "type" : "object",
         "properties" : {
           "id" : {
@@ -1115,6 +1474,7 @@
         }
       },
       "LedgerAccount" : {
+        "required" : [ "balance", "id", "lockVersion", "ownerId", "ownerType" ],
         "type" : "object",
         "properties" : {
           "id" : {

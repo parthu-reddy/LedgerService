@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import jakarta.persistence.Index;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,26 +34,32 @@ import com.fooddelivery.common.enums.ChargeCategory;
 public class LedgerEntry {
     @Id
     @Column(name = "id")
+    @NotNull
     private UUID id;
 
     @Column(name = "transaction_id", nullable = false)
+    @NotNull
     private UUID transactionId;
 
     @Column(name = "reference_id", nullable = false)
     private UUID referenceId;
 
     @Column(name = "account_id", nullable = false)
+    @NotNull
     private UUID accountId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "direction", nullable = false, length = 6)
+    @NotNull
     private TransactionDirection direction;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 40)
+    @NotNull
     private ChargeCategory category;
 
     @Column(name = "amount", nullable = false)
+    @NotNull
     private BigDecimal amount;
 
     @Column(name = "producer", nullable = false, length = 64)
@@ -65,5 +72,6 @@ public class LedgerEntry {
     private String authorizedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @NotNull
     private OffsetDateTime createdAt;
 }

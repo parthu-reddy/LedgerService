@@ -7,11 +7,13 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(
     scanBasePackages = {"com.fooddelivery.ledger", "com.fooddelivery.common"}
 )
+@EnableFeignClients(basePackages = "com.fooddelivery.ledger.client")
 @EnableDiscoveryClient
 @EnableKafka
 @EnableScheduling

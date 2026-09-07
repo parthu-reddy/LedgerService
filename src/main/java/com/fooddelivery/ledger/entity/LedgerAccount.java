@@ -25,13 +25,16 @@ import java.time.OffsetDateTime;
 public class LedgerAccount {
     @Id
     @Column(name = "id")
+    @jakarta.validation.constraints.NotNull
     private UUID id;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "owner_type", nullable = false)
+    @jakarta.validation.constraints.NotNull
     private LedgerAccountType ownerType;
 
     @Column(name = "owner_id", nullable = false)
+    @jakarta.validation.constraints.NotNull
     private UUID ownerId;
 
     @Enumerated(EnumType.STRING)
@@ -39,13 +42,16 @@ public class LedgerAccount {
     private LedgerAccountType.Kind kind;
 
     @Column(name = "balance", nullable = false)
+    @jakarta.validation.constraints.NotNull
     private BigDecimal balance;
 
-    @Column(name = "currency", nullable = false, length = 3)
+    @Column(name = "currency", nullable = false, length = 3, columnDefinition = "CHAR(3)")
+        @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.CHAR)
     private String currency = "INR";
 
     @Version
     @Column(name = "lock_version", nullable = false)
+    @jakarta.validation.constraints.NotNull
     private Integer lockVersion = 0;
 
     @Column(name = "created_at", nullable = false, updatable = false)

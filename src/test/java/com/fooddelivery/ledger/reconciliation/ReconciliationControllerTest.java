@@ -36,14 +36,14 @@ class ReconciliationControllerTest {
     @Test
     @WithMockUser(roles = "USER")
     void getBreaks_withUserRole_isForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/ledger/admin/reconciliation/breaks"))
+        mockMvc.perform(get("/api/v1/ledger/admin/reconciliation/runs/" + java.util.UUID.randomUUID() + "/breaks"))
                .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getBreaks_withAdminRole_isOk() throws Exception {
-        mockMvc.perform(get("/api/v1/ledger/admin/reconciliation/breaks"))
+        mockMvc.perform(get("/api/v1/ledger/admin/reconciliation/runs/" + java.util.UUID.randomUUID() + "/breaks"))
                .andExpect(status().isOk());
     }
 }

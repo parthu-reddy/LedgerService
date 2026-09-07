@@ -48,6 +48,7 @@ public class Payout {
 
     @Column(name = "currency", nullable = false, length = 3, columnDefinition = "CHAR(3)")
     @Builder.Default
+        @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.CHAR)
     private String currency = "INR";
 
     @Enumerated(EnumType.STRING)

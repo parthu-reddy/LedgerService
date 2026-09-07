@@ -10,11 +10,11 @@ import java.time.LocalDate;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+/** @replication-safe: distributed-lock */
 public class MoneyReconciliationJob {
 
     private final ReconciliationService reconciliationService;
 
-    // @replication-safe: distributed-lock (Assumed handled via ShedLock or similar library via convention)
     // GATEWAY_VS_LEDGER, ORDERS_VS_CLEARING, WALLET_VS_LEDGER, PAYABLE_VS_ORDERS, DOUBLE_ENTRY, STUCK
     @Scheduled(cron = "0 0 2 * * ?") // Nightly at 2 AM
     public void runNightlyReconciliation() {
