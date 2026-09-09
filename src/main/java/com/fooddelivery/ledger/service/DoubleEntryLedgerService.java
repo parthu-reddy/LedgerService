@@ -40,6 +40,10 @@ public class DoubleEntryLedgerService {
     private final ILedgerEntryRepository entryRepository;
     private final EntityManager entityManager;
 
+    /** Asserted as INR at startup by MoneyStartupInvariants; never defaulted silently here. */
+    @org.springframework.beans.factory.annotation.Value("${platform.default-currency:INR}")
+    private String platformCurrency;
+
     public DoubleEntryLedgerService(ILedgerAccountRepository accountRepository,
                                     ILedgerEntryRepository entryRepository,
                                     EntityManager entityManager) {
@@ -56,13 +60,15 @@ public class DoubleEntryLedgerService {
         if (cmd.getTransactionId() == null) {
             throw new IllegalArgumentException("Transaction ID cannot be null");
         }
-        if (!DeterministicIdUtils.isLedgerId(cmd.getTransactionId(), cmd.getProducer(), cmd.getReferenceId().toString(), "1") &&
-            !DeterministicIdUtils.isLedgerId(cmd.getTransactionId(), cmd.getProducer(), cmd.getReferenceId().toString(), "DELIVERED")) {
-            // Note: The logic in isLedgerId uses the leg parameter. We should just check it's v5. 
-            // In the plan it states "DeterministicIdUtils.isLedgerId".
-            if (cmd.getTransactionId().version() != 5) {
-                throw new com.fooddelivery.common.exception.LedgerRejectedException("Transaction ID must be a UUID v5");
-            }
+        if (cmd.getReferenceId() == null || cmd.getProducer() == null || cmd.getLeg() == null) {
+            throw new com.fooddelivery.common.exception.LedgerRejectedException(
+                    "A ledger command must carry producer, referenceId and leg so its transactionId can be re-derived");
+        }
+        if (!DeterministicIdUtils.isLedgerId(cmd.getTransactionId(), cmd.getProducer(),
+                cmd.getReferenceId().toString(), cmd.getLeg())) {
+            throw new com.fooddelivery.common.exception.LedgerRejectedException(
+                    "transactionId " + cmd.getTransactionId() + " is not derivable from (producer="
+                    + cmd.getProducer() + ", reference=" + cmd.getReferenceId() + ", leg=" + cmd.getLeg() + ")");
         }
         if (cmd.getLegs() == null || cmd.getLegs().isEmpty()) {
             throw new com.fooddelivery.common.exception.LedgerRejectedException("Transaction must have legs");
@@ -122,7 +128,7 @@ public class DoubleEntryLedgerService {
             if (checkBalance) {
                 boolean bypass = leg.getCategory() == ChargeCategory.CLAWBACK && leg.getAuthorizedBy() != null;
                 if (!bypass && source.getBalance().compareTo(leg.getAmount()) < 0) {
-                    throw new IllegalStateException("INSUFFICIENT_FUNDS in source account " + source.getId());
+                    throw new com.fooddelivery.common.exception.LedgerRejectedException("INSUFFICIENT_FUNDS in source account " + source.getId());
                 }
             }
 
@@ -257,8 +263,7 @@ public class DoubleEntryLedgerService {
             dto.setTransactionId(first.getTransactionId());
             dto.setCategory(first.getCategory());
             dto.setAmount(first.getAmount());
-            // Need to change dto setDate to OffsetDateTime or map it
-            // dto.setDate(first.getCreatedAt());
+            dto.setDate(first.getCreatedAt());
             for (LedgerEntry e : group) {
                 if (e.getDirection() == TransactionDirection.DEBIT) {
                     dto.setFromAccountId(e.getAccountId());
@@ -276,24 +281,23 @@ public class DoubleEntryLedgerService {
         return new org.springframework.data.domain.PageImpl<>(sortedDtos, pageable, total);
     }
 
+    /**
+     * Resolves the account, creating it on first use.
+     *
+     * <p>Creation goes through {@code ON CONFLICT DO NOTHING} rather than catching a constraint
+     * violation: on Postgres a fired constraint aborts the whole transaction, so the old
+     * catch-and-re-query could not actually recover -- the re-query failed too, and the ledger
+     * movement was lost.
+     */
     private LedgerAccount getOrCreateAccount(UUID ownerId, LedgerAccountType ownerType) {
-        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).orElseGet(() -> {
-            try {
-                LedgerAccount newAccount = LedgerAccount.builder()
-                    .id(UUID.randomUUID())
-                    .ownerId(ownerId)
-                    .ownerType(ownerType)
-                    .kind(ownerType.getKind())
-                    .balance(BigDecimal.ZERO)
-                    .currency("INR")
-                    .lockVersion(0)
-                    .createdAt(OffsetDateTime.now())
-                    .build();
-                return accountRepository.saveAndFlush(newAccount);
-            } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                log.info("Concurrent account creation detected for owner: {} of type: {}", ownerId, ownerType);
-                return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).orElseThrow(() -> new IllegalStateException("Failed to get or create account concurrently", e));
-            }
-        });
+        java.util.Optional<LedgerAccount> existing = accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        accountRepository.insertIfAbsent(UUID.randomUUID(), ownerId, ownerType.name(),
+                ownerType.getKind().name(), platformCurrency);
+        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Could not resolve or create the " + ownerType + " account for " + ownerId));
     }
 }

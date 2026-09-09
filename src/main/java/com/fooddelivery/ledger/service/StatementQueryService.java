@@ -41,8 +41,9 @@ public class StatementQueryService {
 
         StringBuilder sql = new StringBuilder("""
             SELECT e.transaction_id, e.reference_id, e.category, e.amount, e.direction, e.created_at, e.description,
-                   pl.payout_id, p.status as payout_status
+                   pl.payout_id, p.status as payout_status, e.account_id, a.owner_id, a.owner_type
             FROM ledger_entries e
+            JOIN ledger_accounts a ON e.account_id = a.id
             LEFT JOIN payout_lines pl ON e.id = pl.ledger_entry_id AND pl.active = true
             LEFT JOIN payouts p ON pl.payout_id = p.id
             WHERE e.account_id = :accountId
@@ -89,6 +90,9 @@ public class StatementQueryService {
             String description = (String) row[6];
             UUID payoutId = (UUID) row[7];
             String payoutStatusStr = (String) row[8];
+            UUID accountId = (UUID) row[9];
+            UUID lineOwnerId = (UUID) row[10];
+            String ownerTypeStr = (String) row[11];
 
             boolean isSettled = false;
             PayoutStatus pStatus = null;
@@ -100,6 +104,9 @@ public class StatementQueryService {
             dtos.add(LedgerStatementLineDto.builder()
                 .transactionId(transactionId)
                 .referenceId(referenceId)
+                .accountId(accountId)
+                .ownerId(lineOwnerId)
+                .ownerType(com.fooddelivery.common.enums.LedgerAccountType.valueOf(ownerTypeStr))
                 .category(com.fooddelivery.common.enums.ChargeCategory.valueOf(categoryStr))
                 .amount(amount)
                 .direction(com.fooddelivery.common.enums.TransactionDirection.valueOf(directionStr))
@@ -118,8 +125,9 @@ public class StatementQueryService {
     public List<LedgerStatementLineDto> getStatementByReferenceId(UUID referenceId) {
         String sql = """
             SELECT e.transaction_id, e.reference_id, e.category, e.amount, e.direction, e.created_at, e.description,
-                   pl.payout_id, p.status as payout_status
+                   pl.payout_id, p.status as payout_status, e.account_id, a.owner_id, a.owner_type
             FROM ledger_entries e
+            JOIN ledger_accounts a ON e.account_id = a.id
             LEFT JOIN payout_lines pl ON e.id = pl.ledger_entry_id AND pl.active = true
             LEFT JOIN payouts p ON pl.payout_id = p.id
             WHERE e.reference_id = :referenceId
@@ -142,6 +150,9 @@ public class StatementQueryService {
             String description = (String) row[6];
             UUID payoutId = (UUID) row[7];
             String payoutStatusStr = (String) row[8];
+            UUID accountId = (UUID) row[9];
+            UUID ownerId = (UUID) row[10];
+            String ownerTypeStr = (String) row[11];
 
             boolean isSettled = false;
             PayoutStatus pStatus = null;
@@ -153,6 +164,9 @@ public class StatementQueryService {
             dtos.add(LedgerStatementLineDto.builder()
                 .transactionId(transactionId)
                 .referenceId(refId)
+                .accountId(accountId)
+                .ownerId(ownerId)
+                .ownerType(com.fooddelivery.common.enums.LedgerAccountType.valueOf(ownerTypeStr))
                 .category(com.fooddelivery.common.enums.ChargeCategory.valueOf(categoryStr))
                 .amount(amount)
                 .direction(com.fooddelivery.common.enums.TransactionDirection.valueOf(directionStr))

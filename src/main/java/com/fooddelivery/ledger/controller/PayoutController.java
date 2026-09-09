@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/admin/payouts")
+@RequestMapping("/api/v1/internal/admin/payouts")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class PayoutController {
@@ -66,24 +66,44 @@ public class PayoutController {
     }
 
     @GetMapping("/{payoutId}")
-    public ResponseEntity<Payout> getPayout(@PathVariable UUID payoutId) {
-        Payout payout = payoutService.getPayout(payoutId);
-        return ResponseEntity.ok(payout);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.fooddelivery.ledger.dto.PayoutDetailResponse> getPayoutDetail(@PathVariable UUID payoutId) {
+        return ResponseEntity.ok(payoutService.getDetail(payoutId));
     }
 
+    @GetMapping("/pending")
+    public ResponseEntity<List<PendingPayoutResponse>> getPendingPayouts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(payoutService.pending(page, size));
+    }
+
+    /**
+     * Payout history for one payee. The admin drawer's "previous payouts" tab and the history screen
+     * both call this; neither worked, because the client was generated against an endpoint that had
+     * never been written and the controller answered 405 at this path.
+     */
     @GetMapping
-    public ResponseEntity<org.springframework.data.domain.Page<Payout>> getPayouts(
+    public ResponseEntity<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.common.dto.ledger.PayoutDto>> getPayouts(
             @RequestParam String payeeType,
             @RequestParam UUID payeeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
-        return ResponseEntity.ok(payoutService.getPayouts(payeeType, payeeId, pageable));
-    }
-
-    @GetMapping("/pending")
-    public ResponseEntity<List<PendingPayoutResponse>> getPendingPayouts() {
-        return ResponseEntity.ok(payoutService.pending());
+        org.springframework.data.domain.Page<Payout> payoutPage =
+                payoutService.getPayouts(payeeType, payeeId, org.springframework.data.domain.PageRequest.of(page, size));
+        return ResponseEntity.ok(com.fooddelivery.common.dto.PageResponseDto.<com.fooddelivery.common.dto.ledger.PayoutDto>builder()
+                .content(payoutPage.getContent().stream()
+                        .map(com.fooddelivery.ledger.mapper.PayoutMapper::toDto)
+                        .collect(java.util.stream.Collectors.toList()))
+                .number(payoutPage.getNumber())
+                .size(payoutPage.getSize())
+                .totalElements(payoutPage.getTotalElements())
+                .totalPages(payoutPage.getTotalPages())
+                .last(payoutPage.isLast())
+                .first(payoutPage.isFirst())
+                .numberOfElements(payoutPage.getNumberOfElements())
+                .empty(payoutPage.isEmpty())
+                .build());
     }
 }
 

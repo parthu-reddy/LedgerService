@@ -43,8 +43,30 @@ public class PayoutService {
 
     @Transactional(readOnly = true)
     public List<PendingPayoutResponse> pending() {
+        return pending(0, Integer.MAX_VALUE);
+    }
+
+    /**
+     * The queue an administrator clears, largest unsettled amount first.
+     *
+     * <p>Paged on purpose: an unbounded list of every payee with a positive payable will not survive
+     * real volume, and the admin only ever works the top of it.
+     */
+    @Transactional(readOnly = true)
+    public List<PendingPayoutResponse> pending(int page, int size) {
         List<LedgerAccountType> payableTypes = List.of(LedgerAccountType.RESTAURANT_PAYABLE, LedgerAccountType.DRIVER_PAYABLE);
         List<LedgerAccount> accounts = accountRepository.findByOwnerTypeInAndBalanceGreaterThan(payableTypes, BigDecimal.ZERO);
+
+        List<UUID> restaurantIds = new ArrayList<>();
+        List<UUID> driverIds = new ArrayList<>();
+        
+        for (LedgerAccount acc : accounts) {
+            if (acc.getOwnerType() == LedgerAccountType.RESTAURANT_PAYABLE) restaurantIds.add(acc.getOwnerId());
+            else driverIds.add(acc.getOwnerId());
+        }
+
+        Map<UUID, OwnerNameResolver.ResolvedName> restaurantNames = ownerNameResolver.resolveDisplayNames("RESTAURANT", restaurantIds);
+        Map<UUID, OwnerNameResolver.ResolvedName> driverNames = ownerNameResolver.resolveDisplayNames("DRIVER", driverIds);
 
         List<PendingPayoutResponse> responses = new ArrayList<>();
         for (LedgerAccount acc : accounts) {
@@ -61,23 +83,39 @@ public class PayoutService {
             BigDecimal unsettledAmount = acc.getBalance().subtract(pendingAmount);
 
             if (unsettledAmount.compareTo(BigDecimal.ZERO) > 0) {
-                // Fetch beneficiary
-                BeneficiaryResponse beneficiary = beneficiaryClient.getBeneficiary(payeeType, payeeId);
-                String displayName = ownerNameResolver.resolveDisplayName(payeeType, payeeId);
+                BeneficiaryResponse beneficiary = null;
+                try {
+                    beneficiary = beneficiaryClient.getBeneficiary(payeeType, payeeId);
+                } catch (Exception ex) {
+                    log.warn("Failed to get beneficiary for {} {}: {}", payeeType, payeeId, ex.getMessage());
+                }
+
+                OwnerNameResolver.ResolvedName name = "RESTAURANT".equals(payeeType)
+                        ? restaurantNames.get(payeeId) : driverNames.get(payeeId);
+                if (name == null) {
+                    name = OwnerNameResolver.ResolvedName.unresolved(payeeType, payeeId);
+                }
                 
-                // Get unsettled entries to count lines and find unsettled since
                 List<LedgerEntry> unsettledEntries = entryRepository.findUnsettledEntries(acc.getId(), OffsetDateTime.now());
                 OffsetDateTime unsettledSince = unsettledEntries.stream()
                         .map(LedgerEntry::getCreatedAt)
                         .min(OffsetDateTime::compareTo)
                         .orElse(null);
 
-                Payout lastPayout = null; // Could query for latest PAID payout
+                Payout lastPayout = payoutRepository.findFirstByPayeeTypeAndPayeeIdAndStatusOrderByPaidAtDesc(payeeType, payeeId, PayoutStatus.PAID).orElse(null);
+
+                if (beneficiary == null) {
+                    beneficiary = BeneficiaryResponse.builder()
+                        .verified(false)
+                        .source("UNAVAILABLE")
+                        .build();
+                }
 
                 responses.add(PendingPayoutResponse.builder()
                         .payeeType(payeeType)
                         .payeeId(payeeId)
-                        .displayName(displayName)
+                        .displayName(name.displayName())
+                        .nameResolved(name.resolved())
                         .unsettledAmount(unsettledAmount)
                         .unsettledSince(unsettledSince)
                         .lineCount(unsettledEntries.size())
@@ -86,7 +124,11 @@ public class PayoutService {
                         .build());
             }
         }
-        return responses;
+        
+        responses.sort((r1, r2) -> r2.getUnsettledAmount().compareTo(r1.getUnsettledAmount()));
+        int from = Math.min((long) page * size > Integer.MAX_VALUE ? responses.size() : page * size, responses.size());
+        int to = size == Integer.MAX_VALUE ? responses.size() : Math.min(from + size, responses.size());
+        return responses.subList(from, to);
     }
 
     @Transactional
@@ -126,6 +168,16 @@ public class PayoutService {
             throw new IllegalStateException("Beneficiary not verified or missing");
         }
 
+        // payouts.payee_display_name is the audit record of who was paid. A stand-in built from the
+        // id is not a name, so refuse rather than persist one.
+        OwnerNameResolver.ResolvedName payeeName =
+                ownerNameResolver.resolveDisplayName(request.getPayeeType(), request.getPayeeId());
+        if (!payeeName.resolved()) {
+            throw new IllegalStateException("PAYEE_NAME_UNRESOLVED: cannot record a payout to "
+                    + request.getPayeeType() + " " + request.getPayeeId()
+                    + " without a name from the owning service");
+        }
+
         UUID payoutId = UUID.randomUUID();
         String snapshot;
         try {
@@ -134,14 +186,14 @@ public class PayoutService {
             throw new RuntimeException("Failed to serialize beneficiary", e);
         }
 
-        UUID ledgerTransactionId = UUID.randomUUID();
+        UUID ledgerTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "CREATE");
         LedgerLeg leg = new LedgerLeg(
                 accountType, request.getPayeeId(),
-                LedgerAccountType.PAYOUT_IN_TRANSIT, UUID.fromString("00000000-0000-0000-0000-000000000000"), // Assuming a generic transit account
+                LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
                 amount, ChargeCategory.PAYOUT_TRANSFER, "Payout CREATE", adminId.toString()
         );
         LedgerTransactionCommand txReq = new LedgerTransactionCommand(
-                ledgerTransactionId, payoutId, "ledger-service", List.of(leg)
+                ledgerTransactionId, payoutId, "ledger-service", "CREATE", List.of(leg)
         );
         doubleEntryLedgerService.record(txReq);
 
@@ -151,7 +203,7 @@ public class PayoutService {
                 .id(payoutId)
                 .payeeType(request.getPayeeType())
                 .payeeId(request.getPayeeId())
-                .payeeDisplayName(ownerNameResolver.resolveDisplayName(request.getPayeeType(), request.getPayeeId()))
+                .payeeDisplayName(payeeName.displayName())
                 .periodFrom(minDate)
                 .periodTo(request.getPeriodTo())
                 .amount(amount)
@@ -203,14 +255,14 @@ public class PayoutService {
         }
         stateMachine.transitionTo(payout, PayoutStatus.PAID);
         
-        UUID settledTransactionId = UUID.randomUUID();
+        UUID settledTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "PAID");
         LedgerLeg leg = new LedgerLeg(
-                LedgerAccountType.PAYOUT_IN_TRANSIT, UUID.fromString("00000000-0000-0000-0000-000000000000"),
-                LedgerAccountType.BANK, UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
+                LedgerAccountType.BANK, com.fooddelivery.common.constants.LedgerAccounts.BANK,
                 payout.getAmount(), ChargeCategory.PAYOUT_TRANSFER, "Payout PAID", adminId.toString()
         );
         LedgerTransactionCommand txReq = new LedgerTransactionCommand(
-                settledTransactionId, payoutId, "ledger-service", List.of(leg)
+                settledTransactionId, payoutId, "ledger-service", "PAID", List.of(leg)
         );
         doubleEntryLedgerService.record(txReq);
 
@@ -229,15 +281,15 @@ public class PayoutService {
         }
         stateMachine.transitionTo(payout, PayoutStatus.FAILED);
         
-        UUID failTransactionId = UUID.randomUUID();
+        UUID failTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "FAIL");
         LedgerAccountType accountType = "RESTAURANT".equals(payout.getPayeeType()) ? LedgerAccountType.RESTAURANT_PAYABLE : LedgerAccountType.DRIVER_PAYABLE;
         LedgerLeg leg = new LedgerLeg(
-                LedgerAccountType.PAYOUT_IN_TRANSIT, UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
                 accountType, payout.getPayeeId(),
                 payout.getAmount(), ChargeCategory.PAYOUT_TRANSFER, "Payout FAIL", adminId.toString()
         );
         LedgerTransactionCommand txReq = new LedgerTransactionCommand(
-                failTransactionId, payoutId, "ledger-service", List.of(leg)
+                failTransactionId, payoutId, "ledger-service", "FAIL", List.of(leg)
         );
         doubleEntryLedgerService.record(txReq);
 
@@ -257,15 +309,15 @@ public class PayoutService {
         }
         stateMachine.transitionTo(payout, PayoutStatus.CANCELLED);
         
-        UUID cancelTransactionId = UUID.randomUUID();
+        UUID cancelTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "CANCEL");
         LedgerAccountType accountType = "RESTAURANT".equals(payout.getPayeeType()) ? LedgerAccountType.RESTAURANT_PAYABLE : LedgerAccountType.DRIVER_PAYABLE;
         LedgerLeg leg = new LedgerLeg(
-                LedgerAccountType.PAYOUT_IN_TRANSIT, UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
                 accountType, payout.getPayeeId(),
                 payout.getAmount(), ChargeCategory.PAYOUT_TRANSFER, "Payout CANCEL", adminId.toString()
         );
         LedgerTransactionCommand txReq = new LedgerTransactionCommand(
-                cancelTransactionId, payoutId, "ledger-service", List.of(leg)
+                cancelTransactionId, payoutId, "ledger-service", "CANCEL", List.of(leg)
         );
         doubleEntryLedgerService.record(txReq);
 
@@ -284,5 +336,83 @@ public class PayoutService {
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<Payout> getPayouts(String payeeType, UUID payeeId, org.springframework.data.domain.Pageable pageable) {
         return payoutRepository.findByPayeeTypeAndPayeeId(payeeType, payeeId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public com.fooddelivery.ledger.dto.PayoutDetailResponse getDetail(UUID payoutId) {
+        Payout payout = payoutRepository.findById(payoutId).orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutId));
+        List<com.fooddelivery.ledger.entity.PayoutLine> lines = payoutLineRepository.findByPayoutId(payoutId);
+        return com.fooddelivery.ledger.dto.PayoutDetailResponse.builder()
+                .id(payout.getId())
+                .payeeType(payout.getPayeeType())
+                .payeeId(payout.getPayeeId())
+                .payeeDisplayName(payout.getPayeeDisplayName())
+                .periodFrom(payout.getPeriodFrom())
+                .periodTo(payout.getPeriodTo())
+                .amount(payout.getAmount())
+                .currency(payout.getCurrency())
+                .status(payout.getStatus())
+                .beneficiary(readBeneficiary(payout.getBeneficiarySnapshot()))
+                .beneficiarySnapshot(payout.getBeneficiarySnapshot())
+                .bankReference(payout.getBankReference())
+                .failureReason(payout.getFailureReason())
+                .createdBy(payout.getCreatedBy())
+                .approvedBy(payout.getApprovedBy())
+                .paidBy(payout.getPaidBy())
+                .ledgerTransactionId(payout.getLedgerTransactionId())
+                .settledTransactionId(payout.getSettledTransactionId())
+                .createdAt(payout.getCreatedAt())
+                .approvedAt(payout.getApprovedAt())
+                .paidAt(payout.getPaidAt())
+                .lines(lines.stream().map(com.fooddelivery.ledger.mapper.PayoutMapper::toDto).collect(Collectors.toList()))
+                .build();
+    }
+
+    private BeneficiaryResponse readBeneficiary(String snapshot) {
+        if (snapshot == null || snapshot.isBlank()) return null;
+        try {
+            return objectMapper.readValue(snapshot, BeneficiaryResponse.class);
+        } catch (Exception e) {
+            log.warn("Unreadable beneficiary snapshot on a payout: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * What one payee is owed and when they were last paid. This is what the restaurant and rider
+     * summary cards need, and it is served to the SERVICE identity -- those callers used to reach for
+     * the admin-only queue of every payee on the platform, which is both a 403 and a data leak.
+     */
+    @Transactional(readOnly = true)
+    public com.fooddelivery.common.dto.ledger.PayeeMoneySummaryDto payeeSummary(String payeeType, UUID payeeId) {
+        LedgerAccountType accountType = "RESTAURANT".equals(payeeType)
+                ? LedgerAccountType.RESTAURANT_PAYABLE : LedgerAccountType.DRIVER_PAYABLE;
+
+        BigDecimal balance = accountRepository.findByOwnerIdAndOwnerType(payeeId, accountType)
+                .map(LedgerAccount::getBalance).orElse(BigDecimal.ZERO);
+
+        BigDecimal inFlight = payoutRepository
+                .findByPayeeTypeAndPayeeIdAndStatusIn(payeeType, payeeId, List.of(PayoutStatus.DRAFT, PayoutStatus.APPROVED))
+                .stream().map(Payout::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Payout last = payoutRepository
+                .findFirstByPayeeTypeAndPayeeIdAndStatusOrderByPaidAtDesc(payeeType, payeeId, PayoutStatus.PAID)
+                .orElse(null);
+
+        BeneficiaryResponse beneficiary = null;
+        try {
+            beneficiary = beneficiaryClient.getBeneficiary(payeeType, payeeId);
+        } catch (Exception ex) {
+            log.warn("Failed to get beneficiary for {} {}: {}", payeeType, payeeId, ex.getMessage());
+        }
+
+        return com.fooddelivery.common.dto.ledger.PayeeMoneySummaryDto.builder()
+                .payeeType(payeeType)
+                .payeeId(payeeId)
+                .unsettledAmount(balance.subtract(inFlight).max(BigDecimal.ZERO))
+                .pendingPayoutAmount(inFlight)
+                .lastPayout(com.fooddelivery.ledger.mapper.PayoutMapper.toDto(last))
+                .beneficiary(beneficiary)
+                .build();
     }
 }

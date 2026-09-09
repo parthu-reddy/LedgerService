@@ -106,6 +106,17 @@ public class LedgerEventListener {
     @DltHandler
     public void handleDltEvent(String payload, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Headers Map<String, Object> headers) {
         log.error("Event failed after all retries. Payload: {}, Topic: {}, Headers: {}", payload, topic, headers);
-        kafkaTemplate.send("ledger-events-dlq", payload);
+        String extractedEventId = KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
+        String eventId = extractedEventId != null ? extractedEventId : "UNKNOWN_DLT";
+        
+        LedgerRejection rejection = LedgerRejection.builder()
+            .id(UUID.randomUUID())
+            .eventId(eventId)
+            .producer("DLT")
+            .payload(payload)
+            .reason("Failed after all retries")
+            .createdAt(OffsetDateTime.now())
+            .build();
+        rejectionRepository.save(rejection);
     }
 }

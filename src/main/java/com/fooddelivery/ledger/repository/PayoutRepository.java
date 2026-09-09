@@ -14,4 +14,8 @@ public interface PayoutRepository extends JpaRepository<Payout, UUID> {
     Optional<Payout> findByIdempotencyKey(String idempotencyKey);
     List<Payout> findByPayeeTypeAndPayeeIdAndStatusIn(String payeeType, UUID payeeId, List<PayoutStatus> statuses);
     org.springframework.data.domain.Page<Payout> findByPayeeTypeAndPayeeId(String payeeType, UUID payeeId, org.springframework.data.domain.Pageable pageable);
+    Optional<Payout> findFirstByPayeeTypeAndPayeeIdAndStatusOrderByPaidAtDesc(String payeeType, UUID payeeId, PayoutStatus status);
+
+    /** Oldest payout still sitting in a status, used by the PayoutApprovedNotPaid alert. */
+    Optional<Payout> findFirstByStatusOrderByApprovedAtAsc(PayoutStatus status);
 }

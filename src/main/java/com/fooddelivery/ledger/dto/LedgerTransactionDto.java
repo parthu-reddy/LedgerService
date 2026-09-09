@@ -20,7 +20,7 @@ public class LedgerTransactionDto {
     @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
     @jakarta.validation.constraints.NotNull
-    private LocalDateTime date;
+    private java.time.OffsetDateTime date;
 
 
 }

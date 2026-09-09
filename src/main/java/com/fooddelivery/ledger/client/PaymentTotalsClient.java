@@ -11,5 +11,5 @@ import java.util.Map;
 @FeignClient(name = "payment-service", fallback = PaymentTotalsClientFallback.class)
 public interface PaymentTotalsClient {
     @GetMapping("/api/v1/internal/payments/daily-totals")
-    Map<String, BigDecimal> getDailyTotals(@RequestParam("date") LocalDate date);
+    Map<String, BigDecimal> getDailyTotals(@RequestParam("date") LocalDate date, @RequestParam(value = "gatewayName", required = false) String gatewayName);
 }

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/ledger/admin/reconciliation")
+@RequestMapping("/api/v1/internal/admin/ledger/reconciliation")
 @RequiredArgsConstructor
 
 
@@ -66,7 +66,7 @@ public class ReconciliationController {
     @PreAuthorize("hasRole('ADMIN')")
     public void resolveBreak(@PathVariable UUID id, @RequestBody ResolveBreakRequest request) {
         ReconciliationBreak rBreak = breakRepository.findById(id).orElseThrow();
-        rBreak.setResolvedAt(LocalDateTime.now());
+        rBreak.setResolvedAt(java.time.OffsetDateTime.now());
         rBreak.setResolvedBy(request.getResolvedBy());
         rBreak.setNote(request.getNote());
         breakRepository.save(rBreak);

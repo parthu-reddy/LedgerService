@@ -45,9 +45,10 @@ public class DoubleEntryLedgerServiceRulesTest {
         cmd.setTransactionId(UUID.randomUUID());
         cmd.setProducer("TEST");
         cmd.setReferenceId(UUID.randomUUID());
+        cmd.setLeg("1");
         
         LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
-        assertTrue(ex.getMessage().contains("must be a UUID v5"));
+        assertTrue(ex.getMessage().contains("not derivable"), ex.getMessage());
     }
 
     @Test
@@ -56,6 +57,7 @@ public class DoubleEntryLedgerServiceRulesTest {
         // create a UUID v5
         cmd.setProducer("TEST");
         cmd.setReferenceId(UUID.randomUUID());
+        cmd.setLeg("1");
         cmd.setTransactionId(DeterministicIdUtils.ledgerId("TEST", cmd.getReferenceId(), "1"));
         
         LedgerLeg leg = new LedgerLeg();
@@ -67,7 +69,7 @@ public class DoubleEntryLedgerServiceRulesTest {
         cmd.setLegs(Collections.singletonList(leg));
 
         LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
-        assertTrue(ex.getMessage().contains("Amount must be positive"));
+        assertTrue(ex.getMessage().contains("Amount must be positive"), ex.getMessage());
     }
 
     @Test
@@ -75,6 +77,7 @@ public class DoubleEntryLedgerServiceRulesTest {
         LedgerTransactionCommand cmd = new LedgerTransactionCommand();
         cmd.setProducer("TEST");
         cmd.setReferenceId(UUID.randomUUID());
+        cmd.setLeg("1");
         cmd.setTransactionId(DeterministicIdUtils.ledgerId("TEST", cmd.getReferenceId(), "1"));
         
         UUID commonId = UUID.randomUUID();
@@ -87,7 +90,7 @@ public class DoubleEntryLedgerServiceRulesTest {
         cmd.setLegs(Collections.singletonList(leg));
 
         LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
-        assertTrue(ex.getMessage().contains("Self transfers not allowed"));
+        assertTrue(ex.getMessage().contains("Self transfers not allowed"), ex.getMessage());
     }
 
     @Test
@@ -95,6 +98,7 @@ public class DoubleEntryLedgerServiceRulesTest {
         LedgerTransactionCommand cmd = new LedgerTransactionCommand();
         cmd.setProducer("TEST");
         cmd.setReferenceId(UUID.randomUUID());
+        cmd.setLeg("1");
         cmd.setTransactionId(DeterministicIdUtils.ledgerId("TEST", cmd.getReferenceId(), "1"));
         
         LedgerLeg leg = new LedgerLeg();
@@ -120,7 +124,81 @@ public class DoubleEntryLedgerServiceRulesTest {
         when(accountRepo.findByOwnerIdAndOwnerType(leg.getToId(), leg.getToType())).thenReturn(Optional.of(destAcc));
         when(accountRepo.findByIdForUpdate(sourceAcc.getId())).thenReturn(Optional.of(sourceAcc));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.record(cmd));
-        assertTrue(ex.getMessage().contains("INSUFFICIENT_FUNDS"));
+        LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
+        assertTrue(ex.getMessage().contains("INSUFFICIENT_FUNDS"), ex.getMessage());
+    }
+
+    private LedgerTransactionCommand payableDebit(String amount, ChargeCategory category, String authorizedBy) {
+        LedgerTransactionCommand cmd = new LedgerTransactionCommand();
+        cmd.setProducer("TEST");
+        cmd.setReferenceId(UUID.randomUUID());
+        cmd.setLeg("1");
+        cmd.setTransactionId(DeterministicIdUtils.ledgerId("TEST", cmd.getReferenceId(), "1"));
+
+        LedgerLeg leg = new LedgerLeg();
+        leg.setAmount(new BigDecimal(amount));
+        leg.setFromId(UUID.randomUUID());
+        leg.setFromType(LedgerAccountType.RESTAURANT_PAYABLE);
+        leg.setToId(UUID.randomUUID());
+        leg.setToType(LedgerAccountType.PLATFORM_CLEARING);
+        leg.setCategory(category);
+        leg.setAuthorizedBy(authorizedBy);
+        cmd.setLegs(Collections.singletonList(leg));
+        return cmd;
+    }
+
+    private void payableHolds(LedgerTransactionCommand cmd, String balance) {
+        LedgerLeg leg = cmd.getLegs().get(0);
+        LedgerAccount source = new LedgerAccount();
+        source.setId(UUID.randomUUID());
+        source.setKind(LedgerAccountType.Kind.PAYABLE);
+        source.setBalance(new BigDecimal(balance));
+
+        LedgerAccount dest = new LedgerAccount();
+        dest.setId(UUID.randomUUID());
+        dest.setKind(LedgerAccountType.Kind.INTERNAL);
+        dest.setBalance(BigDecimal.ZERO);
+
+        when(accountRepo.findByOwnerIdAndOwnerType(leg.getFromId(), leg.getFromType())).thenReturn(Optional.of(source));
+        when(accountRepo.findByOwnerIdAndOwnerType(leg.getToId(), leg.getToType())).thenReturn(Optional.of(dest));
+        when(accountRepo.findByIdForUpdate(source.getId())).thenReturn(Optional.of(source));
+    }
+
+    /**
+     * A PAYABLE source must not go negative either.
+     *
+     * <p>The insufficient-funds case above uses a PREPAID source, so removing PAYABLE from the
+     * balance rule left every test green — found on 2026-09-09 by performing the break-test Phase 2's
+     * validation.md specified. A negative payable is the platform paying out money it does not owe.
+     */
+    @Test
+    void testPayableCannotGoNegative() {
+        LedgerTransactionCommand cmd = payableDebit("100.00", ChargeCategory.PAYOUT_TRANSFER, null);
+        payableHolds(cmd, "50.00");
+
+        LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
+        assertTrue(ex.getMessage().contains("INSUFFICIENT_FUNDS"), ex.getMessage());
+    }
+
+    /**
+     * The one deliberate exception: an authorised clawback may take a payable negative, because the
+     * payee owes the money back whether or not they still hold it.
+     */
+    @Test
+    void testAuthorisedClawbackMayTakeAPayableNegative() {
+        LedgerTransactionCommand cmd = payableDebit("100.00", ChargeCategory.CLAWBACK, "ADMIN");
+        payableHolds(cmd, "50.00");
+
+        service.record(cmd); // must not throw
+    }
+
+    /** An unauthorised clawback does not get the exception. */
+    @Test
+    void testUnauthorisedClawbackIsStillBounded() {
+        LedgerTransactionCommand cmd = payableDebit("100.00", ChargeCategory.CLAWBACK, null);
+        payableHolds(cmd, "50.00");
+
+        LedgerRejectedException ex = assertThrows(LedgerRejectedException.class, () -> service.record(cmd));
+        assertTrue(ex.getMessage().contains("INSUFFICIENT_FUNDS"), ex.getMessage());
     }
 }

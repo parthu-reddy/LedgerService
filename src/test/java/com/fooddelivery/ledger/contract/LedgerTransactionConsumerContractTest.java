@@ -89,4 +89,5 @@ class LedgerTransactionConsumerContractTest {
                 verify(ledgerService).record(
                         any(com.fooddelivery.common.dto.ledger.LedgerTransactionCommand.class)));
     }
+
 }

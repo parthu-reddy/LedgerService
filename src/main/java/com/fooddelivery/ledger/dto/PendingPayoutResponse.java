@@ -19,6 +19,11 @@ public class PendingPayoutResponse {
     private String payeeType;
     private UUID payeeId;
     private String displayName;
+    /**
+     * False when the owning service could not name this payee, so the admin screen shows the id and
+     * an "unresolved" chip rather than a plausible-looking fake.
+     */
+    private boolean nameResolved;
     private BigDecimal unsettledAmount;
     private OffsetDateTime unsettledSince;
     private int lineCount;

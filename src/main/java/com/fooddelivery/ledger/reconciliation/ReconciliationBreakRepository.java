@@ -12,6 +12,11 @@ public interface ReconciliationBreakRepository extends JpaRepository<Reconciliat
     List<ReconciliationBreak> findByKindAndSubjectTypeAndSubjectId(BreakKind kind, String subjectType, UUID subjectId);
     boolean existsByKindAndSubjectIdAndResolvedAtIsNull(BreakKind kind, UUID subjectId);
 
+    /** Drives the alert gauges: read from the table so resolving a break lowers the series again. */
+    long countByResolvedAtIsNull();
+
+    long countByKindAndResolvedAtIsNull(BreakKind kind);
+
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) > 0 FROM ReconciliationBreak b JOIN ReconciliationRun r ON b.runId = r.id WHERE b.kind = :kind AND b.subjectId = :subjectId AND CAST(r.startedAt AS date) = CURRENT_DATE")
     boolean existsByKindAndSubjectIdCreatedToday(@org.springframework.data.repository.query.Param("kind") BreakKind kind, @org.springframework.data.repository.query.Param("subjectId") UUID subjectId);
 

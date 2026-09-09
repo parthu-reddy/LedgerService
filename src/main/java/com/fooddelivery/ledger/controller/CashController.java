@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/admin/cash")
+@RequestMapping("/api/v1/internal/admin/cash")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class CashController {
@@ -26,6 +26,11 @@ public class CashController {
     public ResponseEntity<CashRemittance> remitCash(@RequestBody CashRemittanceRequest request) {
         CashRemittance remittance = cashService.recordCashRemittance(request, getAdminId());
         return ResponseEntity.ok(remittance);
+    }
+
+    @GetMapping("/drivers/{driverId}/summary")
+    public ResponseEntity<com.fooddelivery.common.dto.ledger.CashSummaryDto> getCashSummary(@PathVariable UUID driverId) {
+        return ResponseEntity.ok(cashService.getCashSummary(driverId));
     }
 
     @GetMapping("/drivers/{driverId}")

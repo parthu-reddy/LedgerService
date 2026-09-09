@@ -18,13 +18,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.redis.enabled=false", "spring.main.allow-bean-definition-overriding=true",
         "eureka.client.enabled=false",
         "spring.cloud.config.enabled=false",
-        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
+        "spring.config.import=",
+        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.flyway.enabled=false",
-        "spring.jpa.hibernate.ddl-auto=create-drop"
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.cache.type=none",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
 })
 @AutoConfigureMockMvc(addFilters = false)
 public class MockRequestTest {
@@ -44,7 +47,7 @@ public class MockRequestTest {
 
     @Test
     public void testGetEntriesWithBadUUID() throws Exception {
-        mockMvc.perform(get("/api/v1/ledger/admin/entries")
+        mockMvc.perform(get("/api/v1/internal/admin/ledger/entries")
                 .param("ownerId", "4ae86b19-25f4- 4123-bd76-5f591eaabd6b")
                 .param("ownerType", "CUSTOMER"))
                 .andExpect(status().isBadRequest());

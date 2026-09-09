@@ -54,6 +54,25 @@ public interface ILedgerEntryRepository extends JpaRepository<LedgerEntry, UUID>
             @Param("direction") com.fooddelivery.common.enums.TransactionDirection direction,
             @Param("date") java.time.LocalDate date);
 
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM LedgerEntry e "
+            + "WHERE e.accountId = :accountId AND e.direction = :direction AND e.category = :category")
+    java.math.BigDecimal sumByAccountAndDirectionAndCategory(
+            @Param("accountId") UUID accountId,
+            @Param("direction") com.fooddelivery.common.enums.TransactionDirection direction,
+            @Param("category") com.fooddelivery.common.enums.ChargeCategory category);
+
+    /** Same-day movement on one account, used by the per-gateway reconciliation check. */
+    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM LedgerEntry e, com.fooddelivery.ledger.entity.LedgerAccount a "
+            + "WHERE a.id = e.accountId "
+            + "AND a.ownerId = :ownerId AND a.ownerType = :ownerType "
+            + "AND e.direction = :direction "
+            + "AND CAST(e.createdAt AS date) = :date")
+    java.math.BigDecimal sumByOwnerAndDirectionAndDate(
+            @Param("ownerId") UUID ownerId,
+            @Param("ownerType") com.fooddelivery.common.enums.LedgerAccountType ownerType,
+            @Param("direction") com.fooddelivery.common.enums.TransactionDirection direction,
+            @Param("date") java.time.LocalDate date);
+
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM LedgerEntry e WHERE e.direction = com.fooddelivery.common.enums.TransactionDirection.DEBIT AND CAST(e.createdAt AS date) = :date")
     java.math.BigDecimal sumTotalDebitsByDate(@Param("date") java.time.LocalDate date);
 

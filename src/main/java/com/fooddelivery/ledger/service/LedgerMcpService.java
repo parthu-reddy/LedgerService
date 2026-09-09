@@ -18,12 +18,14 @@ import java.util.UUID;
 public class LedgerMcpService {
 
     private final LedgerController ledgerController;
+    private final com.fooddelivery.ledger.controller.AdminLedgerController adminLedgerController;
     private final com.fooddelivery.ledger.controller.InternalLedgerController internalLedgerController;
     private final ObjectMapper objectMapper;
     private final PayoutService payoutService;
 
-    public LedgerMcpService(LedgerController ledgerController, com.fooddelivery.ledger.controller.InternalLedgerController internalLedgerController, ObjectMapper objectMapper, PayoutService payoutService) {
+    public LedgerMcpService(LedgerController ledgerController, com.fooddelivery.ledger.controller.AdminLedgerController adminLedgerController, com.fooddelivery.ledger.controller.InternalLedgerController internalLedgerController, ObjectMapper objectMapper, PayoutService payoutService) {
         this.ledgerController = ledgerController;
+        this.adminLedgerController = adminLedgerController;
         this.internalLedgerController = internalLedgerController;
         this.objectMapper = objectMapper;
         this.payoutService = payoutService;
@@ -79,7 +81,7 @@ public class LedgerMcpService {
             LedgerAccountType oType = ownerType != null && !ownerType.isEmpty() ? LedgerAccountType.valueOf(ownerType.toUpperCase()) : null;
             ChargeCategory cat = category != null && !category.isEmpty() ? ChargeCategory.valueOf(category.toUpperCase()) : null;
             TransactionDirection dir = direction != null && !direction.isEmpty() ? TransactionDirection.valueOf(direction.toUpperCase()) : null;
-            return objectMapper.writeValueAsString(ledgerController.getEntries(page, size, tId, oId, oType, cat, dir).getBody());
+            return objectMapper.writeValueAsString(adminLedgerController.getEntries(page, size, tId, oId, oType, cat, dir).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
         }
@@ -94,7 +96,7 @@ public class LedgerMcpService {
             LedgerAccountType oType = ownerType != null && !ownerType.isEmpty() ? LedgerAccountType.valueOf(ownerType.toUpperCase()) : null;
             ChargeCategory cat = category != null && !category.isEmpty() ? ChargeCategory.valueOf(category.toUpperCase()) : null;
             TransactionDirection dir = direction != null && !direction.isEmpty() ? TransactionDirection.valueOf(direction.toUpperCase()) : null;
-            return objectMapper.writeValueAsString(ledgerController.getTransactions(page, size, tId, oId, oType, cat, dir).getBody());
+            return objectMapper.writeValueAsString(adminLedgerController.getTransactions(page, size, tId, oId, oType, cat, dir).getBody());
         } catch (Exception e) {
             return "Error: " + e.getMessage();
         }

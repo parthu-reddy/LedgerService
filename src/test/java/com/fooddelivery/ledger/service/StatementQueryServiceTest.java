@@ -61,7 +61,8 @@ public class StatementQueryServiceTest {
         List<Object[]> mockResults = new ArrayList<>();
         mockResults.add(new Object[] {
             UUID.randomUUID(), UUID.randomUUID(), "ORDER_TOTAL", new java.math.BigDecimal("150.00"), "CREDIT", 
-            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null
+            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null, mockAccount.getId(),
+            ownerId, "RESTAURANT_PAYABLE"
         });
         when(dataQuery.getResultList()).thenReturn(mockResults);
 
@@ -72,6 +73,10 @@ public class StatementQueryServiceTest {
         assertFalse(result.isEmpty());
         assertEquals(1, result.getTotalElements());
         assertEquals("ORDER_TOTAL", result.getContent().get(0).getCategory().name());
+        // The party the line belongs to, not the account's surrogate key: this is what callers
+        // attribute a line by, and matching on accountId instead is why the clawback cap never applied.
+        assertEquals(ownerId, result.getContent().get(0).getOwnerId());
+        assertEquals(LedgerAccountType.RESTAURANT_PAYABLE, result.getContent().get(0).getOwnerType());
     }
     
     @Test
@@ -84,7 +89,8 @@ public class StatementQueryServiceTest {
         List<Object[]> mockResults = new ArrayList<>();
         mockResults.add(new Object[] {
             UUID.randomUUID(), refId, "ORDER_TOTAL", new java.math.BigDecimal("150.00"), "CREDIT", 
-            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null
+            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null, UUID.randomUUID(),
+            UUID.randomUUID(), "RESTAURANT_PAYABLE"
         });
         
         when(query.getResultList()).thenReturn(mockResults);

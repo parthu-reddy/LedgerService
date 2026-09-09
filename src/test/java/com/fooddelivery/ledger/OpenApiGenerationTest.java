@@ -99,6 +99,26 @@ public class OpenApiGenerationTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.ledger.service.PayoutService payoutService;
 
+    // PayeePayoutController takes this directly. It was added without a mock here, so the spec
+    // generator stopped loading its context -- which is why openapi.json went stale, SPEC-DRIFT
+    // went red, and the UI's "generated" client had to be hand-edited.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.repository.PayoutLineRepository payoutLineRepository;
+
+    // MoneyReconciliationJob takes the nightly lock through this. TestApp's scoped scan reaches
+    // the reconciliation package, so the job is constructed even though this test only wants routes.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.repository.ILedgerEntryRepository iLedgerEntryRepository;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.repository.PayoutRepository payoutRepository;
+
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.ledger.repository.ILedgerRejectionRepository iLedgerRejectionRepository;
+
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.ledger.reconciliation.ReconciliationRunRepository reconciliationRunRepository;
 

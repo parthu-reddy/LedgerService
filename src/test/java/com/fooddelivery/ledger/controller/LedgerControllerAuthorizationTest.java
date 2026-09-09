@@ -163,14 +163,14 @@ public class LedgerControllerAuthorizationTest {
         when(accountRepository.findByOwnerTypeInAndBalanceGreaterThan(any(), any()))
                 .thenReturn(java.util.List.of());
 
-        mockMvc.perform(get("/api/v1/admin/payouts/pending"))
+        mockMvc.perform(get("/api/v1/internal/admin/payouts/pending"))
                 .andExpect(status().isOk());
     }
 
     @Test
     @WithMockUser(username = "driver-user", roles = {"DELIVERY"})
     void getPendingPayouts_Driver_Forbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/payouts/pending"))
+        mockMvc.perform(get("/api/v1/internal/admin/payouts/pending"))
                 .andExpect(status().isForbidden());
     }
 }

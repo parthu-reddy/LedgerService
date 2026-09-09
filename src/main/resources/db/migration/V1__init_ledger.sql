@@ -47,8 +47,8 @@ CREATE TABLE payouts (
     payee_type VARCHAR(32) NOT NULL,
     payee_id UUID NOT NULL,
     payee_display_name VARCHAR(255) NOT NULL,
-    period_from TIMESTAMP NOT NULL,
-    period_to TIMESTAMP NOT NULL,
+    period_from TIMESTAMPTZ NOT NULL,
+    period_to TIMESTAMPTZ NOT NULL,
     amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
     currency CHAR(3) NOT NULL DEFAULT 'INR',
     status VARCHAR(16) NOT NULL,
@@ -61,10 +61,10 @@ CREATE TABLE payouts (
     idempotency_key VARCHAR(255) NOT NULL UNIQUE,
     ledger_transaction_id UUID NOT NULL,
     settled_transaction_id UUID,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    approved_at TIMESTAMP,
-    paid_at TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    approved_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE payout_lines (
@@ -75,7 +75,7 @@ CREATE TABLE payout_lines (
     category VARCHAR(40) NOT NULL,
     direction VARCHAR(6) NOT NULL,
     amount NUMERIC(14,2) NOT NULL,
-    entry_created_at TIMESTAMP NOT NULL,
+    entry_created_at TIMESTAMPTZ NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
@@ -88,13 +88,13 @@ CREATE TABLE cash_remittances (
     reference VARCHAR(128),
     recorded_by UUID NOT NULL,
     ledger_transaction_id UUID NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE reconciliation_runs (
     id UUID PRIMARY KEY,
-    started_at TIMESTAMP NOT NULL,
-    finished_at TIMESTAMP,
+    started_at TIMESTAMPTZ NOT NULL,
+    finished_at TIMESTAMPTZ,
     status VARCHAR(20) NOT NULL,
     summary JSONB
 );
@@ -108,7 +108,7 @@ CREATE TABLE reconciliation_breaks (
     expected NUMERIC(14,2) NOT NULL,
     actual NUMERIC(14,2) NOT NULL,
     detail JSONB,
-    resolved_at TIMESTAMP,
+    resolved_at TIMESTAMPTZ,
     resolved_by UUID,
     note VARCHAR(1000)
 );
