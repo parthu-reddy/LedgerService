@@ -3,7 +3,6 @@ package com.fooddelivery.ledger.listener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.support.TransactionCallback;
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +25,6 @@ public class LedgerEventListenerTest {
     private LedgerEventListener listener;
     private DoubleEntryLedgerService ledgerService;
     private ObjectMapper objectMapper;
-    private KafkaTemplate<String, String> kafkaTemplate;
     private IIdempotencyKeyRepository idempotencyKeyRepository;
     private ILedgerRejectionRepository rejectionRepository;
 
@@ -34,7 +32,6 @@ public class LedgerEventListenerTest {
     void setUp() {
         ledgerService = mock(DoubleEntryLedgerService.class);
         objectMapper = new ObjectMapper();
-        kafkaTemplate = mock(KafkaTemplate.class);
         idempotencyKeyRepository = mock(IIdempotencyKeyRepository.class);
         rejectionRepository = mock(ILedgerRejectionRepository.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
@@ -44,7 +41,7 @@ public class LedgerEventListenerTest {
             return callback.doInTransaction(null);
         });
 
-        listener = new LedgerEventListener(ledgerService, objectMapper, kafkaTemplate, idempotencyKeyRepository, rejectionRepository, transactionTemplate);
+        listener = new LedgerEventListener(ledgerService, objectMapper, idempotencyKeyRepository, rejectionRepository, transactionTemplate);
     }
 
     @Test

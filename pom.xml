@@ -244,12 +244,6 @@
                 <configuration>
                     <testFramework>JUNIT5</testFramework>
                     <baseClassForTests>com.fooddelivery.ledger.ContractTestBase</baseClassForTests>
-                    <baseClassMappings>
-                        <baseClassMapping>
-                            <contractPackageRegex>.*messaging.*</contractPackageRegex>
-                            <baseClassFQN>com.fooddelivery.ledger.contract.BaseMessagingClass</baseClassFQN>
-                        </baseClassMapping>
-                    </baseClassMappings>
                 </configuration>
             </plugin>
         </plugins>

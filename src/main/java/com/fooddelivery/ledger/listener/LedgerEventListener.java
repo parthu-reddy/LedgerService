@@ -34,20 +34,17 @@ public class LedgerEventListener {
 
     private final DoubleEntryLedgerService ledgerService;
     private final ObjectMapper objectMapper;
-    private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
     private final IIdempotencyKeyRepository idempotencyKeyRepository;
     private final ILedgerRejectionRepository rejectionRepository;
     private final TransactionTemplate transactionTemplate;
 
     public LedgerEventListener(DoubleEntryLedgerService ledgerService,
                                ObjectMapper objectMapper,
-                               org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate,
                                IIdempotencyKeyRepository idempotencyKeyRepository,
                                ILedgerRejectionRepository rejectionRepository,
                                TransactionTemplate transactionTemplate) {
         this.ledgerService = ledgerService;
         this.objectMapper = objectMapper;
-        this.kafkaTemplate = kafkaTemplate;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
         this.rejectionRepository = rejectionRepository;
         this.transactionTemplate = transactionTemplate;
