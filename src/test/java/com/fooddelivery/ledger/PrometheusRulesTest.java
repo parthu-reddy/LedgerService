@@ -36,11 +36,19 @@ class PrometheusRulesTest {
     private static final Path RULES = Paths.get("../Deployment/prometheus/rules/money.yml");
     private static final Path RUNBOOK = Paths.get("../RandomDocuments/MoneyFlowReview_2026-09-04/RUNBOOK.md");
 
-    /** Services whose src/main may register a money metric. */
+    /**
+     * Services whose src/main may register a money metric.
+     *
+     * <p>CommonLibrary became an aggregator of six modules on 2026-09-12, so
+     * {@code ../CommonLibrary/src/main} no longer exists and this test stopped seeing
+     * {@code money_outbox_backlog_age_seconds}, which {@code OutboxBacklogMetrics} registers from
+     * what is now {@code common-messaging}. Listing the aggregator directory rather than each module
+     * keeps the walk correct if the modules are ever renamed or added to — the walk below recurses.
+     */
     private static final List<String> PRODUCERS = List.of(
             "../LedgerService/src/main", "../CustomerApplication/src/main",
             "../WalletService/src/main", "../PaymentGatewayIntegration/src/main",
-            "../CommonLibrary/src/main");
+            "../CommonLibrary");
 
     private record Alert(String name, String expr, String forDuration, Map<String, Object> labels,
                          Map<String, Object> annotations) {
