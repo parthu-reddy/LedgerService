@@ -74,7 +74,7 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
             idempotencyKeyRepository.save(new IdempotencyKey(idempotencyKeyStr));
 
             try {
-                JsonNode rootNode = eventBinder.getPayloadNode(payload);
+                JsonNode rootNode = objectMapper.readTree(payload);
                 String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
                 if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
                     LedgerTransactionCommand cmd = eventBinder.bind(payload, LedgerTransactionCommand.class);
