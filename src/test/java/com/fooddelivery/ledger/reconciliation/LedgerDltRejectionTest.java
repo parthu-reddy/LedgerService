@@ -16,8 +16,10 @@ public class LedgerDltRejectionTest {
     @Test
     public void testDltRejection() {
         ILedgerRejectionRepository repo = mock(ILedgerRejectionRepository.class);
+        // handleDltEvent touches only the rejection repository; the rest stay null, including the
+        // binder, so this test keeps asserting the DLT path and nothing else.
         LedgerEventListener listener = new LedgerEventListener(
-            null, null, null, repo, null
+            null, null, null, repo, null, null
         );
 
         Map<String, Object> headers = new HashMap<>();
@@ -39,8 +41,10 @@ public class LedgerDltRejectionTest {
     @Test
     public void testDltRejectionWithMissingHeaders() {
         ILedgerRejectionRepository repo = mock(ILedgerRejectionRepository.class);
+        // handleDltEvent touches only the rejection repository; the rest stay null, including the
+        // binder, so this test keeps asserting the DLT path and nothing else.
         LedgerEventListener listener = new LedgerEventListener(
-            null, null, null, repo, null
+            null, null, null, repo, null, null
         );
 
         Map<String, Object> headers = new HashMap<>();

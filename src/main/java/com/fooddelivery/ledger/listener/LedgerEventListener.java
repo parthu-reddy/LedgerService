@@ -38,11 +38,14 @@ public class LedgerEventListener {
     private final ILedgerRejectionRepository rejectionRepository;
     private final TransactionTemplate transactionTemplate;
 
-    public LedgerEventListener(DoubleEntryLedgerService ledgerService,
+        private final com.fooddelivery.common.event.EventBinder eventBinder;
+
+public LedgerEventListener(DoubleEntryLedgerService ledgerService,
                                ObjectMapper objectMapper,
                                IIdempotencyKeyRepository idempotencyKeyRepository,
                                ILedgerRejectionRepository rejectionRepository,
-                               TransactionTemplate transactionTemplate) {
+                               TransactionTemplate transactionTemplate, com.fooddelivery.common.event.EventBinder eventBinder) {
+        this.eventBinder = eventBinder;
         this.ledgerService = ledgerService;
         this.objectMapper = objectMapper;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
@@ -50,7 +53,7 @@ public class LedgerEventListener {
         this.transactionTemplate = transactionTemplate;
     }
 
-    @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true")
+    @RetryableTopic(attempts = "5", backoff = @Backoff(delay = 1000, multiplier = 2.0), autoCreateTopics = "true", exclude = {com.fooddelivery.common.event.EventBindingException.class}, traversingCauses = "true")
     @KafkaListener(topics = KafkaConstants.TOPIC_LEDGER_EVENTS, groupId = KafkaConstants.GROUP_LEDGER_SERVICE + "-ledgereventlistener")
     public void handleEvents(String payload, @Headers Map<String, Object> headers) throws Exception {
         String extractedEventId = KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
@@ -71,10 +74,10 @@ public class LedgerEventListener {
             idempotencyKeyRepository.save(new IdempotencyKey(idempotencyKeyStr));
 
             try {
-                JsonNode rootNode = objectMapper.readTree(payload);
+                JsonNode rootNode = eventBinder.getPayloadNode(payload);
                 String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
                 if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
-                    LedgerTransactionCommand cmd = objectMapper.readValue(payload, LedgerTransactionCommand.class);
+                    LedgerTransactionCommand cmd = eventBinder.bind(payload, LedgerTransactionCommand.class);
                     try {
                         ledgerService.record(cmd);
                     } catch (LedgerRejectedException e) {

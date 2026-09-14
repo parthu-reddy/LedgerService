@@ -41,7 +41,9 @@ public class LedgerEventListenerTest {
             return callback.doInTransaction(null);
         });
 
-        listener = new LedgerEventListener(ledgerService, objectMapper, idempotencyKeyRepository, rejectionRepository, transactionTemplate);
+        listener = new LedgerEventListener(ledgerService, objectMapper, idempotencyKeyRepository, rejectionRepository, transactionTemplate,
+                new com.fooddelivery.common.event.EventBinder(objectMapper,
+                        jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator()));
     }
 
     @Test
