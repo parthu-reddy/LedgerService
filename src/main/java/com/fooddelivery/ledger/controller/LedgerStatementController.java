@@ -65,10 +65,4 @@ public class LedgerStatementController {
         return ResponseEntity.ok(statement);
     }
 
-    @PreAuthorize("hasAnyRole('SERVICE', 'ADMIN')")
-    @GetMapping("/statements/references/{referenceId}")
-    public ResponseEntity<java.util.List<LedgerStatementLineDto>> getStatementByReference(
-            @PathVariable UUID referenceId) {
-        return ResponseEntity.ok(statementQueryService.getStatementByReferenceId(referenceId));
-    }
 }

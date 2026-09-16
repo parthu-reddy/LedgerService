@@ -67,20 +67,6 @@ public class LedgerController {
      * client sends no token. Flagged for review rather than secured here, since adding auth would
      * break the caller.
      */
-    /** Read by ONDC settlement reconciliation, which runs as background work. */
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('SERVICE', 'ADMIN')")
-    @GetMapping("/orders/{orderId}/total")
-    public ResponseEntity<java.math.BigDecimal> getOrderLedgerAmount(@PathVariable String orderId) {
-        final UUID referenceId;
-        try {
-            referenceId = UUID.fromString(orderId);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "orderId must be the order's reference UUID; received: " + orderId);
-        }
-        return ResponseEntity.ok(ledgerService.getOrderLedgerTotal(referenceId));
-    }
-
     @java.lang.SuppressWarnings("all")
     public LedgerController(final ILedgerAccountRepository accountRepository, final com.fooddelivery.ledger.service.DoubleEntryLedgerService ledgerService, final com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy) {
         this.accountRepository = accountRepository;

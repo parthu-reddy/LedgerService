@@ -14,7 +14,7 @@ import org.springframework.cloud.contract.spec.Contract
 Contract.make {
     request {
         method 'GET'
-        urlPath('/api/v1/ledger/orders/3f2504e0-4f89-41d3-9a0c-0305e82c3301/total')
+        urlPath('/api/v1/internal/ledger/orders/3f2504e0-4f89-41d3-9a0c-0305e82c3301/total')
     }
     response {
         status 200

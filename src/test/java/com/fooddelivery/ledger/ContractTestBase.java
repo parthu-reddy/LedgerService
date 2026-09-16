@@ -22,7 +22,8 @@ public abstract class ContractTestBase {
                .thenReturn(new java.math.BigDecimal("100.50"));
         com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy = Mockito.mock(com.fooddelivery.common.security.money.MoneyAccessPolicy.class);
         LedgerController controller = new LedgerController(accountRepository, ledgerService, moneyAccessPolicy);
-        com.fooddelivery.ledger.controller.InternalLedgerController internalController = new com.fooddelivery.ledger.controller.InternalLedgerController(ledgerService);
+        com.fooddelivery.ledger.service.StatementQueryService statementQueryService = Mockito.mock(com.fooddelivery.ledger.service.StatementQueryService.class);
+        com.fooddelivery.ledger.controller.InternalLedgerController internalController = new com.fooddelivery.ledger.controller.InternalLedgerController(ledgerService, statementQueryService);
         RestAssuredMockMvc.standaloneSetup(controller, internalController);
         
     }
