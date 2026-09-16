@@ -88,9 +88,6 @@ public class OpenApiGenerationTest {
     private com.fooddelivery.ledger.repository.ILedgerAccountRepository iLedgerAccountRepository;
 
     @org.springframework.boot.test.mock.mockito.MockBean
-    private com.fooddelivery.ledger.service.CashService cashService;
-
-    @org.springframework.boot.test.mock.mockito.MockBean
     private com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy;
 
     @org.springframework.boot.test.mock.mockito.MockBean

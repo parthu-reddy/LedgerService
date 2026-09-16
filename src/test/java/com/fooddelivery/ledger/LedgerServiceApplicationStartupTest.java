@@ -48,7 +48,6 @@ public class LedgerServiceApplicationStartupTest {
         for (Class<?> required : new Class<?>[]{
                 com.fooddelivery.ledger.service.DoubleEntryLedgerService.class,
                 com.fooddelivery.ledger.service.PayoutService.class,
-                com.fooddelivery.ledger.service.CashService.class,
                 com.fooddelivery.ledger.service.OwnerNameResolver.class,
                 com.fooddelivery.ledger.reconciliation.ReconciliationService.class,
                 com.fooddelivery.ledger.listener.LedgerEventListener.class}) {
@@ -67,11 +66,8 @@ public class LedgerServiceApplicationStartupTest {
         for (String path : new String[]{
                 "/api/v1/internal/admin/payouts",
                 "/api/v1/internal/admin/payouts/pending",
-                "/api/v1/internal/admin/cash",
                 "/api/v1/internal/ledger/payouts",
-                "/api/v1/internal/ledger/cash/drivers/{driverId}/summary",
                 "/api/v1/ledger/payouts",
-                "/api/v1/ledger/cash/drivers/{driverId}",
                 "/api/v1/ledger/statements"}) {
             assertTrue(mapped.contains(path), "no handler is mapped at " + path + "\nmapped: " + mapped);
         }

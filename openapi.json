@@ -291,34 +291,6 @@
         }
       }
     },
-    "/api/v1/internal/admin/cash/remit" : {
-      "post" : {
-        "tags" : [ "cash-controller" ],
-        "operationId" : "remitCash",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CashRemittanceRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CashRemittance"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/ledger/statements/{ownerType}/{ownerId}" : {
       "get" : {
         "tags" : [ "ledger-statement-controller" ],
@@ -329,7 +301,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "ownerId",
@@ -545,78 +517,6 @@
         }
       }
     },
-    "/api/v1/ledger/cash/drivers/{driverId}" : {
-      "get" : {
-        "tags" : [ "payee-cash-controller" ],
-        "operationId" : "getCashByDriver",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        }, {
-          "name" : "page",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 0
-          }
-        }, {
-          "name" : "size",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 20
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/PageResponseDtoCashRemittanceDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/ledger/cash/drivers/{driverId}/summary" : {
-      "get" : {
-        "tags" : [ "payee-cash-controller" ],
-        "operationId" : "getCashSummary",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CashSummaryDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/ledger/accounts/{ownerType}/{ownerId}" : {
       "get" : {
         "tags" : [ "ledger-controller" ],
@@ -627,7 +527,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "ownerId",
@@ -731,78 +631,6 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PayeeMoneySummaryDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/internal/ledger/cash/drivers/{driverId}" : {
-      "get" : {
-        "tags" : [ "internal-cash-controller" ],
-        "operationId" : "getCashByDriver_1",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        }, {
-          "name" : "page",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 0
-          }
-        }, {
-          "name" : "size",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 20
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/PageResponseDtoCashRemittanceDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/internal/ledger/cash/drivers/{driverId}/summary" : {
-      "get" : {
-        "tags" : [ "internal-cash-controller" ],
-        "operationId" : "getCashSummary_1",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CashSummaryDto"
                 }
               }
             }
@@ -921,7 +749,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "category",
@@ -929,7 +757,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           }
         }, {
           "name" : "direction",
@@ -1198,7 +1026,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           }
         }, {
           "name" : "category",
@@ -1206,7 +1034,7 @@
           "required" : false,
           "schema" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           }
         }, {
           "name" : "direction",
@@ -1224,78 +1052,6 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ApiResponsePageResponseDtoLedgerEntry"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/internal/admin/cash/drivers/{driverId}" : {
-      "get" : {
-        "tags" : [ "cash-controller" ],
-        "operationId" : "getCashByDriver_2",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        }, {
-          "name" : "page",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 0
-          }
-        }, {
-          "name" : "size",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "format" : "int32",
-            "default" : 20
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/PageCashRemittance"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/internal/admin/cash/drivers/{driverId}/summary" : {
-      "get" : {
-        "tags" : [ "cash-controller" ],
-        "operationId" : "getCashSummary_2",
-        "parameters" : [ {
-          "name" : "driverId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CashSummaryDto"
                 }
               }
             }
@@ -1492,52 +1248,6 @@
           }
         }
       },
-      "CashRemittanceRequest" : {
-        "type" : "object",
-        "properties" : {
-          "driverId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "amount" : {
-            "type" : "number"
-          },
-          "reference" : {
-            "type" : "string"
-          }
-        }
-      },
-      "CashRemittance" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "driverId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "amount" : {
-            "type" : "number"
-          },
-          "reference" : {
-            "type" : "string"
-          },
-          "recordedBy" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "ledgerTransactionId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "createdAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
-      },
       "LedgerStatementLineDto" : {
         "type" : "object",
         "properties" : {
@@ -1559,11 +1269,11 @@
           },
           "ownerType" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           },
           "category" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           },
           "amount" : {
             "type" : "number"
@@ -1603,13 +1313,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "size" : {
             "type" : "integer",
@@ -1621,17 +1329,19 @@
               "$ref" : "#/components/schemas/LedgerStatementLineDto"
             }
           },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
           },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -1642,13 +1352,8 @@
         "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
         "type" : "object",
         "properties" : {
-          "offset" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "pageSize" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
           "paged" : {
             "type" : "boolean"
@@ -1657,11 +1362,16 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
           "unpaged" : {
             "type" : "boolean"
+          },
+          "pageSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "offset" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -1840,7 +1550,7 @@
           },
           "category" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           },
           "direction" : {
             "type" : "string",
@@ -1858,96 +1568,6 @@
           }
         }
       },
-      "CashRemittanceDto" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "driverId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "amount" : {
-            "type" : "number"
-          },
-          "reference" : {
-            "type" : "string"
-          },
-          "recordedBy" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "ledgerTransactionId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "createdAt" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
-      },
-      "PageResponseDtoCashRemittanceDto" : {
-        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
-        "type" : "object",
-        "properties" : {
-          "content" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/CashRemittanceDto"
-            }
-          },
-          "totalElements" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "totalPages" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "last" : {
-            "type" : "boolean"
-          },
-          "size" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "first" : {
-            "type" : "boolean"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "empty" : {
-            "type" : "boolean"
-          }
-        }
-      },
-      "CashSummaryDto" : {
-        "type" : "object",
-        "properties" : {
-          "driverId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "cashCollected" : {
-            "type" : "number"
-          },
-          "cashRemitted" : {
-            "type" : "number"
-          },
-          "cashInHand" : {
-            "type" : "number"
-          }
-        }
-      },
       "LedgerAccount" : {
         "required" : [ "balance", "id", "lockVersion", "ownerId", "ownerType" ],
         "type" : "object",
@@ -1958,7 +1578,7 @@
           },
           "ownerType" : {
             "type" : "string",
-            "enum" : [ "GATEWAY_RECEIVABLE", "CASH_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
+            "enum" : [ "GATEWAY_RECEIVABLE", "BANK", "PLATFORM_CLEARING", "PLATFORM_REVENUE", "TAX_PAYABLE", "PAYOUT_IN_TRANSIT", "RESTAURANT_PAYABLE", "DRIVER_PAYABLE", "CUSTOMER_CREDIT", "ADVERTISER_PREPAID" ]
           },
           "ownerId" : {
             "type" : "string",
@@ -2182,7 +1802,7 @@
           },
           "category" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           },
           "fromAccountId" : {
             "type" : "string",
@@ -2313,13 +1933,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "size" : {
             "type" : "integer",
@@ -2331,17 +1949,19 @@
               "$ref" : "#/components/schemas/ReconciliationRun"
             }
           },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
           },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -2360,13 +1980,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "pageable" : {
+            "$ref" : "#/components/schemas/PageableObject"
           },
           "size" : {
             "type" : "integer",
@@ -2378,17 +1996,19 @@
               "$ref" : "#/components/schemas/ReconciliationBreak"
             }
           },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
           },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -2487,7 +2107,7 @@
           },
           "category" : {
             "type" : "string",
-            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "CASH_COLLECTED", "CASH_REMITTED", "STORE_CREDIT" ]
+            "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           },
           "amount" : {
             "type" : "number"
@@ -2542,53 +2162,6 @@
           "numberOfElements" : {
             "type" : "integer",
             "format" : "int32"
-          },
-          "empty" : {
-            "type" : "boolean"
-          }
-        }
-      },
-      "PageCashRemittance" : {
-        "required" : [ "content", "empty", "first", "last", "number", "numberOfElements", "size", "totalElements", "totalPages" ],
-        "type" : "object",
-        "properties" : {
-          "totalElements" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "totalPages" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "size" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "content" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/CashRemittance"
-            }
-          },
-          "first" : {
-            "type" : "boolean"
-          },
-          "last" : {
-            "type" : "boolean"
-          },
-          "pageable" : {
-            "$ref" : "#/components/schemas/PageableObject"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
           },
           "empty" : {
             "type" : "boolean"
