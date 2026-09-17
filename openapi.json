@@ -367,36 +367,6 @@
         }
       }
     },
-    "/api/v1/ledger/statements/references/{referenceId}" : {
-      "get" : {
-        "tags" : [ "ledger-statement-controller" ],
-        "operationId" : "getStatementByReference",
-        "parameters" : [ {
-          "name" : "referenceId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/LedgerStatementLineDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/ledger/payouts/{payeeType}/{payeeId}" : {
       "get" : {
         "tags" : [ "payee-payout-controller" ],
@@ -491,32 +461,6 @@
         }
       }
     },
-    "/api/v1/ledger/orders/{orderId}/total" : {
-      "get" : {
-        "tags" : [ "ledger-controller" ],
-        "operationId" : "getOrderLedgerAmount",
-        "parameters" : [ {
-          "name" : "orderId",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "number"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/ledger/accounts/{ownerType}/{ownerId}" : {
       "get" : {
         "tags" : [ "ledger-controller" ],
@@ -545,6 +489,36 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LedgerAccount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/ledger/statements/references/{referenceId}" : {
+      "get" : {
+        "tags" : [ "internal-ledger-controller" ],
+        "operationId" : "getStatementByReference",
+        "parameters" : [ {
+          "name" : "referenceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LedgerStatementLineDto"
+                  }
                 }
               }
             }
@@ -631,6 +605,32 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PayeeMoneySummaryDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/ledger/orders/{orderId}/total" : {
+      "get" : {
+        "tags" : [ "internal-ledger-controller" ],
+        "operationId" : "getOrderLedgerAmount",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "number"
                 }
               }
             }
