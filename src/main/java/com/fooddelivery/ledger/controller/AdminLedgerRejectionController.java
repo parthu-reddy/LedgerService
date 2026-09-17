@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/internal/admin/ledger/rejections")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
 @Slf4j
 public class AdminLedgerRejectionController {
 
