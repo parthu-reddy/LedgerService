@@ -45,7 +45,7 @@ import static org.mockito.Mockito.verify;
 @ActiveProfiles("contract-test")
 @AutoConfigureStubRunner(ids = "com.fooddelivery:food-delivery-backend:+:stubs")
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_CLASS)
-@EmbeddedKafka(partitions = 1, topics = {"ledger-events"})
+@EmbeddedKafka(adminTimeout = 60, partitions = 1, topics = {"ledger-events"})
 class LedgerTransactionConsumerContractTest {
 
     @org.springframework.boot.SpringBootConfiguration
