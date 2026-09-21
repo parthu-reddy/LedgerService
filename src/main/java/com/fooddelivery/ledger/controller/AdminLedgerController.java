@@ -31,7 +31,7 @@ public class AdminLedgerController {
 
     private final com.fooddelivery.ledger.service.DoubleEntryLedgerService ledgerService;
 
-    @PreAuthorize("hasRole(\'ADMIN\')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/entries")
     public ResponseEntity<ApiResponse<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.entity.LedgerEntry>>> getEntries(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
@@ -41,7 +41,7 @@ public class AdminLedgerController {
         return ResponseEntity.ok(ApiResponse.success(pageResponse, "Ledger entries retrieved"));
     }
 
-    @PreAuthorize("hasRole(\'ADMIN\')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/transactions")
     public ResponseEntity<ApiResponse<com.fooddelivery.common.dto.PageResponseDto<com.fooddelivery.ledger.dto.LedgerTransactionDto>>> getTransactions(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) UUID transactionId, @RequestParam(required = false) UUID ownerId, @RequestParam(required = false) LedgerAccountType ownerType, @RequestParam(required = false) com.fooddelivery.common.enums.ChargeCategory category, @RequestParam(required = false) com.fooddelivery.common.enums.TransactionDirection direction) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
