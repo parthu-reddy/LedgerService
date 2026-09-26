@@ -15,9 +15,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +29,7 @@ public class StatementQueryService {
 
     @Transactional(readOnly = true)
     public Page<LedgerStatementLineDto> getStatement(LedgerAccountType ownerType, UUID ownerId, 
-                                                     OffsetDateTime from, OffsetDateTime to, 
+                                                     Instant from, Instant to, 
                                                      Boolean settled, Pageable pageable) {
         
         LedgerAccount account = accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType).orElse(null);
@@ -69,7 +67,7 @@ public class StatementQueryService {
         
         Number totalElements = (Number) countQuery.getSingleResult();
 
-        Query dataQuery = entityManager.createNativeQuery(sql.toString());
+        Query dataQuery = typedStatementRows(entityManager.createNativeQuery(sql.toString()));
         dataQuery.setParameter("accountId", account.getId());
         if (from != null) dataQuery.setParameter("from", from);
         if (to != null) dataQuery.setParameter("to", to);
@@ -86,7 +84,7 @@ public class StatementQueryService {
             String categoryStr = (String) row[2];
             BigDecimal amount = (BigDecimal) row[3];
             String directionStr = (String) row[4];
-            OffsetDateTime createdAt = ((Timestamp) row[5]).toInstant().atOffset(ZoneOffset.UTC);
+            Instant createdAt = (Instant) row[5];
             String description = (String) row[6];
             UUID payoutId = (UUID) row[7];
             String payoutStatusStr = (String) row[8];
@@ -134,7 +132,7 @@ public class StatementQueryService {
             ORDER BY e.created_at ASC
         """;
 
-        Query dataQuery = entityManager.createNativeQuery(sql);
+        Query dataQuery = typedStatementRows(entityManager.createNativeQuery(sql));
         dataQuery.setParameter("referenceId", referenceId);
 
         List<Object[]> results = dataQuery.getResultList();
@@ -146,7 +144,7 @@ public class StatementQueryService {
             String categoryStr = (String) row[2];
             BigDecimal amount = (BigDecimal) row[3];
             String directionStr = (String) row[4];
-            OffsetDateTime createdAt = ((Timestamp) row[5]).toInstant().atOffset(ZoneOffset.UTC);
+            Instant createdAt = (Instant) row[5];
             String description = (String) row[6];
             UUID payoutId = (UUID) row[7];
             String payoutStatusStr = (String) row[8];
@@ -179,5 +177,27 @@ public class StatementQueryService {
         }
 
         return dtos;
+    }
+
+    /**
+     * Declares every statement column's Java type, so {@code created_at} arrives as an {@link Instant}
+     * whatever JDBC type the driver reports for {@code timestamptz}. The row used to be cast to
+     * {@code java.sql.Timestamp}, which was a guess about Hibernate's default for native queries that
+     * no test could check, because the tests mock the rows. Order and aliases match both statement queries.
+     */
+    private static Query typedStatementRows(Query query) {
+        return query.unwrap(org.hibernate.query.NativeQuery.class)
+                .addScalar("transaction_id", UUID.class)
+                .addScalar("reference_id", UUID.class)
+                .addScalar("category", String.class)
+                .addScalar("amount", BigDecimal.class)
+                .addScalar("direction", String.class)
+                .addScalar("created_at", Instant.class)
+                .addScalar("description", String.class)
+                .addScalar("payout_id", UUID.class)
+                .addScalar("payout_status", String.class)
+                .addScalar("account_id", UUID.class)
+                .addScalar("owner_id", UUID.class)
+                .addScalar("owner_type", String.class);
     }
 }

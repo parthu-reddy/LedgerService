@@ -14,7 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "ledger_accounts", uniqueConstraints = {@jakarta.persistence.UniqueConstraint(columnNames = {"owner_type", "owner_id"})})
@@ -55,5 +55,5 @@ public class LedgerAccount {
     private Integer lockVersion = 0;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 }

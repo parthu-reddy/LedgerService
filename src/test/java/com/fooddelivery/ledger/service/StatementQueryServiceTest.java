@@ -54,14 +54,17 @@ public class StatementQueryServiceTest {
         when(countQuery.setParameter(anyString(), any())).thenReturn(countQuery);
         when(countQuery.getSingleResult()).thenReturn(1L);
 
-        Query dataQuery = mock(Query.class);
+        Query dataQuery = mock(org.hibernate.query.NativeQuery.class, org.mockito.Answers.RETURNS_SELF);
+        // typedStatementRows unwraps to NativeQuery to declare column types; RETURNS_SELF does not
+        // cover unwrap(Class<T>), whose erased return type is Object.
+        when(dataQuery.unwrap(org.hibernate.query.NativeQuery.class)).thenReturn((org.hibernate.query.NativeQuery) dataQuery);
         when(dataQuery.setParameter(anyString(), any())).thenReturn(dataQuery);
         when(dataQuery.setFirstResult(anyInt())).thenReturn(dataQuery);
         when(dataQuery.setMaxResults(anyInt())).thenReturn(dataQuery);
         List<Object[]> mockResults = new ArrayList<>();
         mockResults.add(new Object[] {
             UUID.randomUUID(), UUID.randomUUID(), "ORDER_TOTAL", new java.math.BigDecimal("150.00"), "CREDIT", 
-            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null, mockAccount.getId(),
+            java.time.Instant.now(), "Test description", null, null, mockAccount.getId(),
             ownerId, "RESTAURANT_PAYABLE"
         });
         when(dataQuery.getResultList()).thenReturn(mockResults);
@@ -82,14 +85,17 @@ public class StatementQueryServiceTest {
     @Test
     void testGetStatementByReferenceId_ReturnsResults() {
         UUID refId = UUID.randomUUID();
-        Query query = mock(Query.class);
+        Query query = mock(org.hibernate.query.NativeQuery.class, org.mockito.Answers.RETURNS_SELF);
+        // typedStatementRows unwraps to NativeQuery to declare column types; RETURNS_SELF does not
+        // cover unwrap(Class<T>), whose erased return type is Object.
+        when(query.unwrap(org.hibernate.query.NativeQuery.class)).thenReturn((org.hibernate.query.NativeQuery) query);
         when(query.setParameter(anyString(), any())).thenReturn(query);
         when(entityManager.createNativeQuery(anyString())).thenReturn(query);
         
         List<Object[]> mockResults = new ArrayList<>();
         mockResults.add(new Object[] {
             UUID.randomUUID(), refId, "ORDER_TOTAL", new java.math.BigDecimal("150.00"), "CREDIT", 
-            new java.sql.Timestamp(System.currentTimeMillis()), "Test description", null, null, UUID.randomUUID(),
+            java.time.Instant.now(), "Test description", null, null, UUID.randomUUID(),
             UUID.randomUUID(), "RESTAURANT_PAYABLE"
         });
         

@@ -3,7 +3,7 @@ package com.fooddelivery.ledger.dto;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -21,8 +21,8 @@ public class LedgerRejectionDto {
     private String producer;
     private String reason;
     private String payload;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime resolvedAt;
+    private Instant createdAt;
+    private Instant resolvedAt;
     private String resolvedBy;
     private String resolutionNote;
     /** How long this has been sitting unresolved. Anything over an hour raises a STUCK break. */

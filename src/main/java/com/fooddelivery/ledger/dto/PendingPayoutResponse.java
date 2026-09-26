@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -25,7 +25,7 @@ public class PendingPayoutResponse {
      */
     private boolean nameResolved;
     private BigDecimal unsettledAmount;
-    private OffsetDateTime unsettledSince;
+    private Instant unsettledSince;
     private int lineCount;
     private Payout lastPayout;
     private BeneficiaryResponse beneficiaryStatus;

@@ -14,7 +14,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,7 +61,7 @@ public class AdminLedgerRejectionControllerTest {
                 .producer("customer-application")
                 .reason("transactionId 0000 is not derivable from (producer=customer-application, reference=..., leg=DELIVERED)")
                 .payload("{\"transactionId\":\"0000\"}")
-                .createdAt(OffsetDateTime.now().minusHours(3))
+                .createdAt(Instant.now().minus(java.time.Duration.ofHours(3)))
                 .build();
     }
 
@@ -124,7 +124,7 @@ public class AdminLedgerRejectionControllerTest {
     void resolvingTwiceKeepsTheFirstSignOff() throws Exception {
         UUID id = UUID.randomUUID();
         LedgerRejection already = unresolved(id);
-        already.setResolvedAt(OffsetDateTime.parse("2026-09-01T10:00:00Z"));
+        already.setResolvedAt(Instant.parse("2026-09-01T10:00:00Z"));
         already.setResolvedBy("first-admin");
         already.setResolutionNote("the original note");
         when(rejectionRepository.findById(id)).thenReturn(Optional.of(already));

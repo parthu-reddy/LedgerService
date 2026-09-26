@@ -30,13 +30,13 @@ public class ReconciliationPartialRunTest {
         MeterRegistry registry = new SimpleMeterRegistry();
 
         ReconciliationService service = new ReconciliationService(
-            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo
+            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo, AccountingCalendarFixture.KOLKATA
         );
 
         when(runRepo.save(any(ReconciliationRun.class))).thenAnswer(i -> i.getArgument(0));
 
         // Make checkGatewayVsLedger throw an exception
-        when(pClient.getDailyTotals(any(), any())).thenThrow(new RuntimeException("API DOWN"));
+        when(pClient.getDailyTotals(any(), any(), any())).thenThrow(new RuntimeException("API DOWN"));
 
         LocalDate date = LocalDate.of(2026, 9, 8);
         ReconciliationRun run = service.executeRun(date);
@@ -58,12 +58,12 @@ public class ReconciliationPartialRunTest {
         MeterRegistry registry = new SimpleMeterRegistry();
 
         ReconciliationService service = new ReconciliationService(
-            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo
+            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo, AccountingCalendarFixture.KOLKATA
         );
 
         when(runRepo.save(any(ReconciliationRun.class))).thenAnswer(i -> i.getArgument(0));
 
-        when(oClient.getDailyPaidOrderTotal(any())).thenThrow(new RuntimeException("ORDER API DOWN"));
+        when(oClient.getDailyPaidOrderTotal(any(), any())).thenThrow(new RuntimeException("ORDER API DOWN"));
 
         LocalDate date = LocalDate.of(2026, 9, 8);
         ReconciliationRun run = service.executeRun(date);

@@ -7,7 +7,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.LocalDate;
 
 /**
  * <strong>@replication-safe: distributed-lock</strong> -- one replica runs the nightly
@@ -26,9 +25,13 @@ public class MoneyReconciliationJob {
 
     private final ReconciliationService reconciliationService;
     private final StringRedisTemplate redisTemplate;
+    private final AccountingCalendar accountingCalendar;
 
     // GATEWAY_VS_LEDGER, ORDERS_VS_CLEARING, WALLET_VS_LEDGER, PAYABLE_VS_ORDERS, DOUBLE_ENTRY, STUCK
-    @Scheduled(cron = "0 0 2 * * ?") // Nightly at 2 AM
+    // 02:00 in the accounting zone, reconciling the accounting day that just ended. Both used to be the
+    // JVM's zone: the cron fired at 02:00 wherever the container thought it was, and LocalDate.now()
+    // named "yesterday" in that zone too.
+    @Scheduled(cron = "0 0 2 * * *", zone = "${platform.accounting-zone}")
     public void runNightlyReconciliation() {
         // Held for an hour: long enough that a slow run cannot be overtaken by a second replica,
         // short enough that a crashed replica does not block tomorrow night.
@@ -42,7 +45,7 @@ public class MoneyReconciliationJob {
 
         log.info("Starting nightly money reconciliation job");
         try {
-            ReconciliationRun run = reconciliationService.executeRun(LocalDate.now().minusDays(1));
+            ReconciliationRun run = reconciliationService.executeRun(accountingCalendar.today().minusDays(1));
             log.info("Finished nightly money reconciliation job with status: {}", run.getStatus());
         } catch (Exception e) {
             log.error("Error executing nightly money reconciliation job", e);

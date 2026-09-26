@@ -11,7 +11,7 @@ import java.util.UUID;
 @Repository
 public interface ILedgerRejectionRepository extends JpaRepository<LedgerRejection, UUID> {
 
-    long countByResolvedAtIsNullAndCreatedAtBefore(java.time.OffsetDateTime date);
+    long countByResolvedAtIsNullAndCreatedAtBefore(java.time.Instant date);
 
     /** The queue an operator works: a rejected movement is money that was never booked. */
     Page<LedgerRejection> findByResolvedAtIsNullOrderByCreatedAtAsc(Pageable pageable);

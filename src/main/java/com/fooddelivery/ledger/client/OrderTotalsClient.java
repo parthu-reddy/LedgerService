@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 // "customer-service", not "customer-application": that is the name CustomerApplication registers
 // (spring.application.name), and the name every other client uses -- DeliveryExecutiveApplication,
@@ -17,9 +16,9 @@ import java.time.LocalDate;
         fallback = OrderTotalsClientFallback.class)
 public interface OrderTotalsClient {
     @GetMapping("/api/v1/internal/money/daily-totals")
-    java.util.Map<String, BigDecimal> getDailyPaidOrderTotal(@RequestParam("date") LocalDate date);
+    java.util.Map<String, BigDecimal> getDailyPaidOrderTotal(@RequestParam("from") java.time.Instant from, @RequestParam("to") java.time.Instant to);
 
     /** What the order book says was owed to restaurants and riders for that day's deliveries. */
     @GetMapping("/api/v1/internal/money/daily-payables")
-    java.util.Map<String, BigDecimal> getDailyPayables(@RequestParam("date") LocalDate date);
+    java.util.Map<String, BigDecimal> getDailyPayables(@RequestParam("from") java.time.Instant from, @RequestParam("to") java.time.Instant to);
 }

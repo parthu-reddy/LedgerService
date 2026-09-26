@@ -14,7 +14,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -38,10 +38,10 @@ public class Payout {
     private String payeeDisplayName;
 
     @Column(name = "period_from", nullable = false)
-    private OffsetDateTime periodFrom;
+    private Instant periodFrom;
 
     @Column(name = "period_to", nullable = false)
-    private OffsetDateTime periodTo;
+    private Instant periodTo;
 
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
@@ -83,14 +83,14 @@ public class Payout {
     private UUID settledTransactionId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "approved_at")
-    private OffsetDateTime approvedAt;
+    private Instant approvedAt;
 
     @Column(name = "paid_at")
-    private OffsetDateTime paidAt;
+    private Instant paidAt;
 
     @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 }

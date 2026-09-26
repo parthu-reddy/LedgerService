@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,8 +25,8 @@ public class PayoutDetailResponse {
     private String payeeType;
     private UUID payeeId;
     private String payeeDisplayName;
-    private OffsetDateTime periodFrom;
-    private OffsetDateTime periodTo;
+    private Instant periodFrom;
+    private Instant periodTo;
     private BigDecimal amount;
     private String currency;
     private com.fooddelivery.ledger.entity.PayoutStatus status;
@@ -39,8 +39,8 @@ public class PayoutDetailResponse {
     private UUID paidBy;
     private UUID ledgerTransactionId;
     private UUID settledTransactionId;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime approvedAt;
-    private OffsetDateTime paidAt;
+    private Instant createdAt;
+    private Instant approvedAt;
+    private Instant paidAt;
     private List<PayoutLineDto> lines;
 }

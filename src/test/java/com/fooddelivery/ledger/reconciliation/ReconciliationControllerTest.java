@@ -40,6 +40,9 @@ class ReconciliationControllerTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private ReconciliationBreakRepository reconciliationBreakRepository;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private AccountingCalendar accountingCalendar;
+
     @Autowired
     private MockMvc mockMvc;
 

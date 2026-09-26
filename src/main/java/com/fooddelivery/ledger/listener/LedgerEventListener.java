@@ -23,7 +23,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +88,7 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
                             .producer(cmd.getProducer())
                             .payload(payload)
                             .reason(e.getMessage())
-                            .createdAt(OffsetDateTime.now())
+                            .createdAt(Instant.now())
                             .build();
                         rejectionRepository.save(rejection);
                     }
@@ -105,7 +105,8 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
 
     @DltHandler
     public void handleDltEvent(String payload, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Headers Map<String, Object> headers) {
-        log.error("Event failed after all retries. Payload: {}, Topic: {}, Headers: {}", payload, topic, headers);
+        log.error("Event failed after all retries. Payload: {}, Topic: {}, Headers: {} replay={}", payload, topic, headers,
+                KafkaHeaderUtils.deadLetterPosition(headers));
         String extractedEventId = KafkaHeaderUtils.extractHeaderValue(headers, "eventId");
         String eventId = extractedEventId != null ? extractedEventId : "UNKNOWN_DLT";
         
@@ -115,7 +116,7 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
             .producer("DLT")
             .payload(payload)
             .reason("Failed after all retries")
-            .createdAt(OffsetDateTime.now())
+            .createdAt(Instant.now())
             .build();
         rejectionRepository.save(rejection);
     }

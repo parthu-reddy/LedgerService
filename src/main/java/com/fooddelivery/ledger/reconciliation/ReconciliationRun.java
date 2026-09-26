@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -25,10 +25,10 @@ public class ReconciliationRun {
     private UUID id;
 
     @Column(name = "started_at", nullable = false)
-    private OffsetDateTime startedAt;
+    private Instant startedAt;
 
     @Column(name = "finished_at")
-    private OffsetDateTime finishedAt;
+    private Instant finishedAt;
 
     @Column(nullable = false, length = 20)
     private String status;

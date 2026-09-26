@@ -14,7 +14,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -51,7 +51,7 @@ public class ReconciliationBreak {
     private String detail;
 
     @Column(name = "resolved_at")
-    private OffsetDateTime resolvedAt;
+    private Instant resolvedAt;
 
     @Column(name = "resolved_by")
     private UUID resolvedBy;

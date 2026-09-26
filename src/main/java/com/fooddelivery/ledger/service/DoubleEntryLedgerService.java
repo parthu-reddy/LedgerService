@@ -21,7 +21,7 @@ import jakarta.persistence.criteria.Root;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +151,7 @@ public class DoubleEntryLedgerService {
                 .producer(cmd.getProducer())
                 .description(leg.getDescription())
                 .authorizedBy(leg.getAuthorizedBy())
-                .createdAt(OffsetDateTime.now())
+                .createdAt(Instant.now())
                 .build();
             entryRepository.save(debit);
 
@@ -174,7 +174,7 @@ public class DoubleEntryLedgerService {
                 .producer(cmd.getProducer())
                 .description(leg.getDescription())
                 .authorizedBy(leg.getAuthorizedBy())
-                .createdAt(OffsetDateTime.now())
+                .createdAt(Instant.now())
                 .build();
             entryRepository.save(credit);
         }
@@ -186,6 +186,19 @@ public class DoubleEntryLedgerService {
                 referenceId,
                 TransactionDirection.CREDIT,
                 LedgerAccountType.PLATFORM_CLEARING);
+        return total == null ? BigDecimal.ZERO : total;
+    }
+
+    /**
+     * What one owner's account moved under one category in {@code window}. The restaurant earnings
+     * summary reads an outlet's clawbacks for its day, week or month from here: only the ledger knows
+     * what was actually clawed back, because each clawback is capped by the ones booked before it.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal getCategoryTotal(LedgerAccountType ownerType, UUID ownerId, ChargeCategory category,
+                                       TransactionDirection direction, com.fooddelivery.common.time.TimeWindow window) {
+        BigDecimal total = entryRepository.sumByOwnerAndDirectionAndCategoryInWindow(
+                ownerId, ownerType, direction, category, window.from(), window.to());
         return total == null ? BigDecimal.ZERO : total;
     }
 
@@ -240,12 +253,12 @@ public class DoubleEntryLedgerService {
         
         CriteriaQuery<Object[]> sortQuery = cb.createQuery(Object[].class);
         Root<LedgerEntry> sortRoot = sortQuery.from(LedgerEntry.class);
-        sortQuery.multiselect(sortRoot.get("transactionId"), cb.greatest(sortRoot.<OffsetDateTime>get("createdAt")));
+        sortQuery.multiselect(sortRoot.get("transactionId"), cb.greatest(sortRoot.<Instant>get("createdAt")));
         sortQuery.groupBy(sortRoot.get("transactionId"));
         if (spec != null) {
             sortQuery.where(spec.toPredicate(sortRoot, sortQuery, cb));
         }
-        sortQuery.orderBy(cb.desc(cb.greatest(sortRoot.<OffsetDateTime>get("createdAt"))));
+        sortQuery.orderBy(cb.desc(cb.greatest(sortRoot.<Instant>get("createdAt"))));
         
         List<Object[]> sortedResult = entityManager.createQuery(sortQuery).setFirstResult((int) pageable.getOffset()).setMaxResults(pageable.getPageSize()).getResultList();
         List<UUID> transactionIds = sortedResult.stream().map(obj -> (UUID) obj[0]).collect(Collectors.toList());

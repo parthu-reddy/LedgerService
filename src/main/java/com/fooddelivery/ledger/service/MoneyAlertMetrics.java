@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -54,6 +54,6 @@ public class MoneyAlertMetrics {
         if (oldest.isEmpty() || oldest.get().getApprovedAt() == null) {
             return 0L;
         }
-        return Math.max(0L, Duration.between(oldest.get().getApprovedAt(), OffsetDateTime.now()).toDays());
+        return Math.max(0L, Duration.between(oldest.get().getApprovedAt(), Instant.now()).toDays());
     }
 }

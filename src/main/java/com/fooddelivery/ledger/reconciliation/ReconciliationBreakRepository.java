@@ -17,8 +17,10 @@ public interface ReconciliationBreakRepository extends JpaRepository<Reconciliat
 
     long countByKindAndResolvedAtIsNull(BreakKind kind);
 
-    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) > 0 FROM ReconciliationBreak b JOIN ReconciliationRun r ON b.runId = r.id WHERE b.kind = :kind AND b.subjectId = :subjectId AND CAST(r.startedAt AS date) = CURRENT_DATE")
-    boolean existsByKindAndSubjectIdCreatedToday(@org.springframework.data.repository.query.Param("kind") BreakKind kind, @org.springframework.data.repository.query.Param("subjectId") UUID subjectId);
+    /** Whether a run that started within {@code [from, to)} already recorded this break: today's, in the accounting zone. */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(b) > 0 FROM ReconciliationBreak b JOIN ReconciliationRun r ON b.runId = r.id WHERE b.kind = :kind AND b.subjectId = :subjectId AND r.startedAt >= :from AND r.startedAt < :to")
+    boolean existsByKindAndSubjectIdStartedWithin(@org.springframework.data.repository.query.Param("kind") BreakKind kind, @org.springframework.data.repository.query.Param("subjectId") UUID subjectId,
+            @org.springframework.data.repository.query.Param("from") java.time.Instant from, @org.springframework.data.repository.query.Param("to") java.time.Instant to);
 
     org.springframework.data.domain.Page<ReconciliationBreak> findByKind(BreakKind kind, org.springframework.data.domain.Pageable pageable);
     org.springframework.data.domain.Page<ReconciliationBreak> findByResolvedAtIsNull(org.springframework.data.domain.Pageable pageable);

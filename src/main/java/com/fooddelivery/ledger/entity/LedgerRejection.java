@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 import jakarta.persistence.Index;
 import lombok.AllArgsConstructor;
@@ -40,10 +40,10 @@ public class LedgerRejection {
     private String reason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "resolved_at")
-    private OffsetDateTime resolvedAt;
+    private Instant resolvedAt;
 
     @Column(name = "resolved_by", length = 64)
     private String resolvedBy;

@@ -6,7 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.UUID;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 import jakarta.persistence.Index;
 import jakarta.persistence.Enumerated;
@@ -73,5 +73,5 @@ public class LedgerEntry {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @NotNull
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 }

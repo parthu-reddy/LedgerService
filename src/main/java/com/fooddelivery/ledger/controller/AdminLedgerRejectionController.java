@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -105,7 +105,7 @@ public class AdminLedgerRejectionController {
             return ResponseEntity.ok(toDto(rejection));
         }
 
-        rejection.setResolvedAt(OffsetDateTime.now());
+        rejection.setResolvedAt(Instant.now());
         rejection.setResolvedBy(currentAdmin());
         rejection.setResolutionNote(request.note());
         rejectionRepository.save(rejection);
@@ -131,7 +131,7 @@ public class AdminLedgerRejectionController {
                 .resolvedBy(r.getResolvedBy())
                 .resolutionNote(r.getResolutionNote())
                 .ageMinutes(r.getCreatedAt() == null ? null
-                        : Duration.between(r.getCreatedAt(), OffsetDateTime.now()).toMinutes())
+                        : Duration.between(r.getCreatedAt(), Instant.now()).toMinutes())
                 .build();
     }
 

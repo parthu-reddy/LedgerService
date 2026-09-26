@@ -14,7 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -49,7 +49,7 @@ public class PayoutLine {
     private BigDecimal amount;
 
     @Column(name = "entry_created_at", nullable = false)
-    private OffsetDateTime entryCreatedAt;
+    private Instant entryCreatedAt;
 
     @Column(name = "active", nullable = false)
     @Builder.Default

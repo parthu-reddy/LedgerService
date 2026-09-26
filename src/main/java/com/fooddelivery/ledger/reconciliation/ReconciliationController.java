@@ -8,7 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @RestController
@@ -22,6 +22,7 @@ public class ReconciliationController {
     private final ReconciliationRunRepository runRepository;
     private final ReconciliationBreakRepository breakRepository;
     private final ReconciliationService reconciliationService;
+    private final AccountingCalendar accountingCalendar;
 
     @GetMapping("/runs")
     @PreAuthorize("hasRole('ADMIN')")
@@ -38,9 +39,8 @@ public class ReconciliationController {
     @PostMapping("/runs/{id}/execute")
     @PreAuthorize("hasRole('ADMIN')")
     public ReconciliationRun executeRun(@PathVariable UUID id, @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        // According to original code, it triggers a run for a date. 
-        // Here we can fetch the run if needed, but since the service takes a date, we just pass the date or a default date
-        return reconciliationService.executeRun(date != null ? date : LocalDate.now());
+        // An accounting date; without one, today's in the accounting zone.
+        return reconciliationService.executeRun(date != null ? date : accountingCalendar.today());
     }
 
     @GetMapping("/runs/{id}/breaks")
@@ -66,7 +66,7 @@ public class ReconciliationController {
     @PreAuthorize("hasRole('ADMIN')")
     public void resolveBreak(@PathVariable UUID id, @RequestBody ResolveBreakRequest request) {
         ReconciliationBreak rBreak = breakRepository.findById(id).orElseThrow();
-        rBreak.setResolvedAt(java.time.OffsetDateTime.now());
+        rBreak.setResolvedAt(java.time.Instant.now());
         rBreak.setResolvedBy(request.getResolvedBy());
         rBreak.setNote(request.getNote());
         breakRepository.save(rBreak);

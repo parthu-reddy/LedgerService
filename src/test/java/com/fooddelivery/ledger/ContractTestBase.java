@@ -20,11 +20,15 @@ public abstract class ContractTestBase {
         // getOrderLedgerAmount contract: the ledger's total for one order's reference UUID.
         Mockito.when(ledgerService.getOrderLedgerTotal(Mockito.any(java.util.UUID.class)))
                .thenReturn(new java.math.BigDecimal("100.50"));
+        // getCategoryTotal contract: an outlet's clawbacks over a window.
+        Mockito.when(ledgerService.getCategoryTotal(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+               .thenReturn(new java.math.BigDecimal("42.50"));
         com.fooddelivery.common.security.money.MoneyAccessPolicy moneyAccessPolicy = Mockito.mock(com.fooddelivery.common.security.money.MoneyAccessPolicy.class);
         LedgerController controller = new LedgerController(accountRepository, ledgerService, moneyAccessPolicy);
         com.fooddelivery.ledger.service.StatementQueryService statementQueryService = Mockito.mock(com.fooddelivery.ledger.service.StatementQueryService.class);
         com.fooddelivery.ledger.controller.InternalLedgerController internalController = new com.fooddelivery.ledger.controller.InternalLedgerController(ledgerService, statementQueryService);
-        RestAssuredMockMvc.standaloneSetup(controller, internalController);
+        // Serialize as production does: see PlatformJson (contract-harness Jackson drift).
+        com.fooddelivery.common.contract.PlatformJson.standaloneSetup(controller, internalController);
         
     }
 }

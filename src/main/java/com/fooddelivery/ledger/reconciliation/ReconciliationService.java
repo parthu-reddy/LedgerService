@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +36,7 @@ public class ReconciliationService {
     private final WalletBalancesClient walletBalancesClient;
     private final MeterRegistry meterRegistry;
     private final com.fooddelivery.ledger.repository.ILedgerRejectionRepository rejectionRepository;
+    private final AccountingCalendar accountingCalendar;
     private final java.util.concurrent.ConcurrentHashMap<BreakKind, AtomicLong> breakCounters = new java.util.concurrent.ConcurrentHashMap<>();
     private final AtomicLong lastSuccessEpoch;
     private final Counter partialRunsCounter;
@@ -48,7 +49,8 @@ public class ReconciliationService {
                                  OrderTotalsClient orderTotalsClient,
                                  WalletBalancesClient walletBalancesClient,
                                  MeterRegistry meterRegistry,
-                                 com.fooddelivery.ledger.repository.ILedgerRejectionRepository rejectionRepository) {
+                                 com.fooddelivery.ledger.repository.ILedgerRejectionRepository rejectionRepository,
+                                 AccountingCalendar accountingCalendar) {
         this.runRepository = runRepository;
         this.breakRepository = breakRepository;
         this.accountRepository = accountRepository;
@@ -58,6 +60,7 @@ public class ReconciliationService {
         this.walletBalancesClient = walletBalancesClient;
         this.meterRegistry = meterRegistry;
         this.rejectionRepository = rejectionRepository;
+        this.accountingCalendar = accountingCalendar;
         this.lastSuccessEpoch = meterRegistry.gauge("money_reconciliation_last_success_epoch", new AtomicLong(0));
         this.partialRunsCounter = meterRegistry.counter("money_reconciliation_partial_runs_total");
         // Unresolved breaks is a gauge read from the table, not a counter. A counter only ever goes
@@ -74,9 +77,15 @@ public class ReconciliationService {
 
     private final AtomicLong stuckRejections;
 
+    /** Whether a run that started today, in the accounting zone, already recorded this break. */
+    private boolean recordedToday(ReconciliationBreak rBreak) {
+        com.fooddelivery.common.time.TimeWindow today = accountingCalendar.day(accountingCalendar.today());
+        return breakRepository.existsByKindAndSubjectIdStartedWithin(rBreak.getKind(), rBreak.getSubjectId(), today.from(), today.to());
+    }
+
     private void recordBreak(ReconciliationBreak rBreak) {
         if (breakRepository.existsByKindAndSubjectIdAndResolvedAtIsNull(rBreak.getKind(), rBreak.getSubjectId()) || 
-            breakRepository.existsByKindAndSubjectIdCreatedToday(rBreak.getKind(), rBreak.getSubjectId())) {
+            recordedToday(rBreak)) {
             return;
         }
         breakRepository.save(rBreak);
@@ -93,10 +102,16 @@ public class ReconciliationService {
         }
     }
 
+    /**
+     * Reconciles {@code targetDate} in the accounting zone. The date becomes one {@code [from, to)} window
+     * of instants, and that same window goes to this ledger's queries and to the payment and order
+     * services, so all three sum exactly the same period.
+     */
     public ReconciliationRun executeRun(LocalDate targetDate) {
+        com.fooddelivery.common.time.TimeWindow window = accountingCalendar.day(targetDate);
         ReconciliationRun run = ReconciliationRun.builder()
                 .id(UUID.randomUUID())
-                .startedAt(OffsetDateTime.now())
+                .startedAt(Instant.now())
                 .status("STARTED")
                 .build();
         run = runRepository.save(run);
@@ -104,48 +119,48 @@ public class ReconciliationService {
         boolean partial = false;
 
         try {
-            checkGatewayVsLedger(run, targetDate);
+            checkGatewayVsLedger(run, targetDate, window);
         } catch (Exception e) {
             log.error("GATEWAY_VS_LEDGER failed", e);
             partial = true;
         }
 
         try {
-            checkOrdersVsClearing(run, targetDate);
+            checkOrdersVsClearing(run, targetDate, window);
         } catch (Exception e) {
             log.error("ORDERS_VS_CLEARING failed", e);
             partial = true;
         }
 
         try {
-            checkWalletVsLedger(run, targetDate);
+            checkWalletVsLedger(run, targetDate, window);
         } catch (Exception e) {
             log.error("WALLET_VS_LEDGER failed", e);
             partial = true;
         }
 
         try {
-            checkPayableVsOrders(run, targetDate);
+            checkPayableVsOrders(run, targetDate, window);
         } catch (Exception e) {
             log.error("PAYABLE_VS_ORDERS failed", e);
             partial = true;
         }
 
         try {
-            checkDoubleEntry(run, targetDate);
+            checkDoubleEntry(run, targetDate, window);
         } catch (Exception e) {
             log.error("DOUBLE_ENTRY failed", e);
             partial = true;
         }
 
         try {
-            checkStuck(run, targetDate);
+            checkStuck(run, targetDate, window);
         } catch (Exception e) {
             log.error("STUCK failed", e);
             partial = true;
         }
 
-        run.setFinishedAt(OffsetDateTime.now());
+        run.setFinishedAt(Instant.now());
         run.setStatus(partial ? "PARTIAL" : "SUCCESS");
         run = runRepository.save(run);
         if (partial) {
@@ -156,9 +171,9 @@ public class ReconciliationService {
         return run;
     }
 
-    private void checkGatewayVsLedger(ReconciliationRun run, LocalDate date) {
+    private void checkGatewayVsLedger(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
         for (com.fooddelivery.common.enums.PaymentGateway gateway : com.fooddelivery.common.enums.PaymentGateway.values()) {
-            java.util.Map<String, BigDecimal> totals = paymentTotalsClient.getDailyTotals(date, gateway.name());
+            java.util.Map<String, BigDecimal> totals = paymentTotalsClient.getDailyTotals(window.from(), window.to(), gateway.name());
             BigDecimal expectedCaptured = totals.getOrDefault("capturedAmount", BigDecimal.ZERO);
             BigDecimal expectedRefunded = totals.getOrDefault("refundedAmount", BigDecimal.ZERO);
 
@@ -168,14 +183,14 @@ public class ReconciliationService {
             UUID gatewayAccountOwner = com.fooddelivery.common.constants.LedgerAccounts.gatewayOwnerId(gateway);
             // A capture debits GATEWAY_RECEIVABLE and a refund credits it back, mirroring
             // LedgerBookkeeper.bookPaymentCaptured / bookRefund.
-            BigDecimal actualCaptured = entryRepository.sumByOwnerAndDirectionAndDate(
+            BigDecimal actualCaptured = entryRepository.sumByOwnerAndDirectionInWindow(
                     gatewayAccountOwner,
                     com.fooddelivery.common.enums.LedgerAccountType.GATEWAY_RECEIVABLE,
-                    com.fooddelivery.common.enums.TransactionDirection.DEBIT, date);
-            BigDecimal actualRefunded = entryRepository.sumByOwnerAndDirectionAndDate(
+                    com.fooddelivery.common.enums.TransactionDirection.DEBIT, window.from(), window.to());
+            BigDecimal actualRefunded = entryRepository.sumByOwnerAndDirectionInWindow(
                     gatewayAccountOwner,
                     com.fooddelivery.common.enums.LedgerAccountType.GATEWAY_RECEIVABLE,
-                    com.fooddelivery.common.enums.TransactionDirection.CREDIT, date);
+                    com.fooddelivery.common.enums.TransactionDirection.CREDIT, window.from(), window.to());
 
             if (expectedCaptured.compareTo(actualCaptured) != 0 || expectedRefunded.compareTo(actualRefunded) != 0) {
                 UUID deterministicId = gatewayAccountOwner;
@@ -194,13 +209,13 @@ public class ReconciliationService {
         }
     }
 
-    private void checkOrdersVsClearing(ReconciliationRun run, LocalDate date) {
-        java.util.Map<String, BigDecimal> orderTotalsMap = orderTotalsClient.getDailyPaidOrderTotal(date);
+    private void checkOrdersVsClearing(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
+        java.util.Map<String, BigDecimal> orderTotalsMap = orderTotalsClient.getDailyPaidOrderTotal(window.from(), window.to());
         BigDecimal expectedOrders = orderTotalsMap.getOrDefault("orderTotals", BigDecimal.ZERO);
 
-        BigDecimal actualClearing = entryRepository.sumByOwnerTypeAndDirectionAndDate(
+        BigDecimal actualClearing = entryRepository.sumByOwnerTypeAndDirectionInWindow(
                 com.fooddelivery.common.enums.LedgerAccountType.PLATFORM_CLEARING,
-                com.fooddelivery.common.enums.TransactionDirection.CREDIT, date);
+                com.fooddelivery.common.enums.TransactionDirection.CREDIT, window.from(), window.to());
 
         if (expectedOrders.compareTo(actualClearing) != 0) {
             UUID deterministicId = UUID.nameUUIDFromBytes(("ORDERS_VS_CLEARING_" + date).getBytes(StandardCharsets.UTF_8));
@@ -218,7 +233,7 @@ public class ReconciliationService {
         }
     }
 
-    private void checkWalletVsLedger(ReconciliationRun run, LocalDate date) {
+    private void checkWalletVsLedger(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
         int page = 0;
         int size = 100;
         org.springframework.data.domain.Page<com.fooddelivery.ledger.client.WalletBalanceDto> walletPage;
@@ -264,8 +279,8 @@ public class ReconciliationService {
      * when the order is delivered. A divergence means the pricing matrix and the ledger disagree
      * about what a delivery earned -- the case where a restaurant or rider is paid the wrong amount.
      */
-    private void checkPayableVsOrders(ReconciliationRun run, LocalDate date) {
-        java.util.Map<String, BigDecimal> owed = orderTotalsClient.getDailyPayables(date);
+    private void checkPayableVsOrders(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
+        java.util.Map<String, BigDecimal> owed = orderTotalsClient.getDailyPayables(window.from(), window.to());
 
         record Side(String name, String key, com.fooddelivery.common.enums.LedgerAccountType account) {
         }
@@ -275,8 +290,8 @@ public class ReconciliationService {
                 new Side("DRIVER", "driverPayable", com.fooddelivery.common.enums.LedgerAccountType.DRIVER_PAYABLE)}) {
 
             BigDecimal expected = owed.getOrDefault(side.key(), BigDecimal.ZERO);
-            BigDecimal actual = entryRepository.sumByOwnerTypeAndDirectionAndDate(
-                    side.account(), com.fooddelivery.common.enums.TransactionDirection.CREDIT, date);
+            BigDecimal actual = entryRepository.sumByOwnerTypeAndDirectionInWindow(
+                    side.account(), com.fooddelivery.common.enums.TransactionDirection.CREDIT, window.from(), window.to());
 
             if (expected.compareTo(actual) != 0) {
                 UUID deterministicId = UUID.nameUUIDFromBytes(
@@ -295,9 +310,9 @@ public class ReconciliationService {
         }
     }
 
-    private void checkDoubleEntry(ReconciliationRun run, LocalDate date) {
-        BigDecimal totalDebits = entryRepository.sumTotalDebitsByDate(date);
-        BigDecimal totalCredits = entryRepository.sumTotalCreditsByDate(date);
+    private void checkDoubleEntry(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
+        BigDecimal totalDebits = entryRepository.sumTotalDebitsInWindow(window.from(), window.to());
+        BigDecimal totalCredits = entryRepository.sumTotalCreditsInWindow(window.from(), window.to());
 
         if (totalDebits.compareTo(totalCredits) != 0) {
             UUID deterministicId = UUID.nameUUIDFromBytes(("DOUBLE_ENTRY_" + date).getBytes(StandardCharsets.UTF_8));
@@ -315,7 +330,7 @@ public class ReconciliationService {
         }
 
         // Per-transaction check
-        List<UUID> unbalancedTransactions = entryRepository.findUnbalancedTransactionsByDate(date);
+        List<UUID> unbalancedTransactions = entryRepository.findUnbalancedTransactionsInWindow(window.from(), window.to());
         for (UUID txnId : unbalancedTransactions) {
             ReconciliationBreak txnBreak = ReconciliationBreak.builder()
                     .id(UUID.randomUUID())
@@ -331,10 +346,10 @@ public class ReconciliationService {
         }
     }
 
-    private void checkStuck(ReconciliationRun run, LocalDate date) {
+    private void checkStuck(ReconciliationRun run, LocalDate date, com.fooddelivery.common.time.TimeWindow window) {
         // Find unresolved rejections older than 1 hour
         long oldRejections = rejectionRepository.countByResolvedAtIsNullAndCreatedAtBefore(
-                java.time.OffsetDateTime.now().minusHours(1));
+                java.time.Instant.now().minus(java.time.Duration.ofHours(1)));
         stuckRejections.set(oldRejections);
 
         if (oldRejections > 0) {

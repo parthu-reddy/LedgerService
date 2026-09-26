@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -96,10 +96,10 @@ public class PayoutService {
                     name = OwnerNameResolver.ResolvedName.unresolved(payeeType, payeeId);
                 }
                 
-                List<LedgerEntry> unsettledEntries = entryRepository.findUnsettledEntries(acc.getId(), OffsetDateTime.now());
-                OffsetDateTime unsettledSince = unsettledEntries.stream()
+                List<LedgerEntry> unsettledEntries = entryRepository.findUnsettledEntries(acc.getId(), Instant.now());
+                Instant unsettledSince = unsettledEntries.stream()
                         .map(LedgerEntry::getCreatedAt)
-                        .min(OffsetDateTime::compareTo)
+                        .min(Instant::compareTo)
                         .orElse(null);
 
                 Payout lastPayout = payoutRepository.findFirstByPayeeTypeAndPayeeIdAndStatusOrderByPaidAtDesc(payeeType, payeeId, PayoutStatus.PAID).orElse(null);
@@ -197,7 +197,7 @@ public class PayoutService {
         );
         doubleEntryLedgerService.record(txReq);
 
-        OffsetDateTime minDate = entries.stream().map(LedgerEntry::getCreatedAt).min(OffsetDateTime::compareTo).orElse(request.getPeriodTo());
+        Instant minDate = entries.stream().map(LedgerEntry::getCreatedAt).min(Instant::compareTo).orElse(request.getPeriodTo());
 
         Payout payout = Payout.builder()
                 .id(payoutId)
@@ -243,7 +243,7 @@ public class PayoutService {
         }
         stateMachine.transitionTo(payout, PayoutStatus.APPROVED);
         payout.setApprovedBy(adminId);
-        payout.setApprovedAt(OffsetDateTime.now());
+        payout.setApprovedAt(Instant.now());
         payoutRepository.save(payout);
     }
 
@@ -267,7 +267,7 @@ public class PayoutService {
         doubleEntryLedgerService.record(txReq);
 
         payout.setPaidBy(adminId);
-        payout.setPaidAt(OffsetDateTime.now());
+        payout.setPaidAt(Instant.now());
         payout.setBankReference(bankReference);
         payout.setSettledTransactionId(settledTransactionId);
         payoutRepository.save(payout);

@@ -15,7 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -62,7 +61,10 @@ public class StatementWithPayoutsTest {
         when(accountRepository.findByOwnerIdAndOwnerType(any(), any())).thenReturn(Optional.of(account));
 
         Query countQuery = mock(Query.class);
-        Query dataQuery = mock(Query.class);
+        Query dataQuery = mock(org.hibernate.query.NativeQuery.class, org.mockito.Answers.RETURNS_SELF);
+        // typedStatementRows unwraps to NativeQuery to declare column types; RETURNS_SELF does not
+        // cover unwrap(Class<T>), whose erased return type is Object.
+        when(dataQuery.unwrap(org.hibernate.query.NativeQuery.class)).thenReturn((org.hibernate.query.NativeQuery) dataQuery);
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(countQuery)
                 .thenReturn(dataQuery);
@@ -76,7 +78,7 @@ public class StatementWithPayoutsTest {
 
         Object[] row = new Object[]{
                 UUID.randomUUID(), UUID.randomUUID(), "ORDER_TOTAL", new BigDecimal("10.00"), "CREDIT",
-                Timestamp.from(Instant.now()), "Test order", UUID.randomUUID(), "PAID", UUID.randomUUID(),
+                Instant.now(), "Test order", UUID.randomUUID(), "PAID", UUID.randomUUID(),
                 ownerId, "RESTAURANT_PAYABLE"
         };
         when(dataQuery.getResultList()).thenReturn(java.util.Collections.singletonList(row));

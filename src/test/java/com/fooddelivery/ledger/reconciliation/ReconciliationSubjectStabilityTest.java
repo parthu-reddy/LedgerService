@@ -31,7 +31,7 @@ public class ReconciliationSubjectStabilityTest {
         MeterRegistry registry = new SimpleMeterRegistry();
 
         ReconciliationService service = new ReconciliationService(
-            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo
+            runRepo, breakRepo, accRepo, entryRepo, pClient, oClient, wClient, registry, rejRepo, AccountingCalendarFixture.KOLKATA
         );
 
         when(runRepo.save(any(ReconciliationRun.class))).thenAnswer(i -> i.getArgument(0));
@@ -39,14 +39,14 @@ public class ReconciliationSubjectStabilityTest {
         // Setup a discrepancy for GATEWAY_VS_LEDGER
         java.util.Map<String, BigDecimal> pt = new java.util.HashMap<>();
         pt.put("capturedAmount", new BigDecimal("100.00"));
-        when(pClient.getDailyTotals(any(), any())).thenReturn(pt);
-        when(entryRepo.sumByOwnerAndDirectionAndDate(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(entryRepo.sumByOwnerTypeAndDirectionAndDate(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(pClient.getDailyTotals(any(), any(), any())).thenReturn(pt);
+        when(entryRepo.sumByOwnerAndDirectionInWindow(any(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepo.sumByOwnerTypeAndDirectionInWindow(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         
         // Setup a discrepancy for ORDERS_VS_CLEARING
         java.util.Map<String, BigDecimal> ot = new java.util.HashMap<>();
         ot.put("orderTotals", new BigDecimal("50.00"));
-        when(oClient.getDailyPaidOrderTotal(any())).thenReturn(ot);
+        when(oClient.getDailyPaidOrderTotal(any(), any())).thenReturn(ot);
 
         LocalDate date = LocalDate.of(2026, 9, 8);
         service.executeRun(date);
@@ -78,7 +78,7 @@ public class ReconciliationSubjectStabilityTest {
     public void testServiceInstantiates() {
         MeterRegistry registry = new SimpleMeterRegistry();
         ReconciliationService service = new ReconciliationService(
-            null, null, null, null, null, null, null, registry, null
+            null, null, null, null, null, null, null, registry, null, AccountingCalendarFixture.KOLKATA
         );
         assertNotNull(service);
     }

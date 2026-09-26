@@ -59,7 +59,7 @@ class MoneyReconciliationJobTest {
         reconciliationService = new ReconciliationService(
                 runRepository, breakRepository, accountRepository, entryRepository,
                 paymentTotalsClient, orderTotalsClient, walletBalancesClient,
-                new SimpleMeterRegistry(), rejectionRepository);
+                new SimpleMeterRegistry(), rejectionRepository, AccountingCalendarFixture.KOLKATA);
     }
 
     /** Every ledger read the run makes, answered with zero, so only the case under test moves. */
@@ -67,20 +67,20 @@ class MoneyReconciliationJobTest {
         // Lenient: this one is read only by checkGatewayVsLedger, which does not get that far in the
         // test where the payment client refuses. The other stubs here are reached by every run.
         org.mockito.Mockito.lenient()
-                .when(entryRepository.sumByOwnerAndDirectionAndDate(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(entryRepository.sumByOwnerTypeAndDirectionAndDate(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(entryRepository.sumTotalDebitsByDate(any())).thenReturn(BigDecimal.ZERO);
-        when(entryRepository.sumTotalCreditsByDate(any())).thenReturn(BigDecimal.ZERO);
-        when(entryRepository.findUnbalancedTransactionsByDate(any())).thenReturn(List.of());
+                .when(entryRepository.sumByOwnerAndDirectionInWindow(any(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepository.sumByOwnerTypeAndDirectionInWindow(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepository.sumTotalDebitsInWindow(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepository.sumTotalCreditsInWindow(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepository.findUnbalancedTransactionsInWindow(any(), any())).thenReturn(List.of());
         when(walletBalancesClient.getBalances(anyInt(), anyInt())).thenReturn(Page.empty());
         when(runRepository.save(any(ReconciliationRun.class))).thenAnswer(i -> i.getArgument(0));
-        when(orderTotalsClient.getDailyPayables(any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPayables(any(), any())).thenReturn(Map.of());
     }
 
     // ---------------------------------------------------------------- the job and its lock
 
     private MoneyReconciliationJob job() {
-        return new MoneyReconciliationJob(reconciliationService, redisTemplate);
+        return new MoneyReconciliationJob(reconciliationService, redisTemplate, AccountingCalendarFixture.KOLKATA);
     }
 
     /** The replica that wins the lock does the work. */
@@ -90,8 +90,8 @@ class MoneyReconciliationJobTest {
         when(valueOperations.setIfAbsent(eq(RedisKeyConstants.LOCK_MONEY_RECONCILIATION), any(), any(Duration.class)))
                 .thenReturn(true);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(any(), any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
 
         job().runNightlyReconciliation();
 
@@ -157,10 +157,10 @@ class MoneyReconciliationJobTest {
     void aGatewayMismatchIsRecordedAsABreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(eq(date), any())).thenReturn(Map.of(
+        when(paymentTotalsClient.getDailyTotals(eq(AccountingCalendarFixture.KOLKATA.day(date).from()), eq(AccountingCalendarFixture.KOLKATA.day(date).to()), any())).thenReturn(Map.of(
                 "capturedAmount", new BigDecimal("1000.00"),
                 "refundedAmount", new BigDecimal("50.00")));
-        when(orderTotalsClient.getDailyPaidOrderTotal(date)).thenReturn(Map.of("orderTotals", BigDecimal.ZERO));
+        when(orderTotalsClient.getDailyPaidOrderTotal(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to())).thenReturn(Map.of("orderTotals", BigDecimal.ZERO));
 
         reconciliationService.executeRun(date);
 
@@ -175,9 +175,9 @@ class MoneyReconciliationJobTest {
     void reRunningTheSameDayDoesNotFileTheBreakTwice() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(eq(date), any()))
+        when(paymentTotalsClient.getDailyTotals(eq(AccountingCalendarFixture.KOLKATA.day(date).from()), eq(AccountingCalendarFixture.KOLKATA.day(date).to()), any()))
                 .thenReturn(Map.of("capturedAmount", new BigDecimal("1000.00")));
-        when(orderTotalsClient.getDailyPaidOrderTotal(date)).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to())).thenReturn(Map.of());
 
         // First run finds nothing on file; from then on the break is open.
         when(breakRepository.existsByKindAndSubjectIdAndResolvedAtIsNull(any(), any()))
@@ -196,11 +196,11 @@ class MoneyReconciliationJobTest {
     void aBreakAlreadyFiledTodayIsNotFiledAgain() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(eq(date), any()))
+        when(paymentTotalsClient.getDailyTotals(eq(AccountingCalendarFixture.KOLKATA.day(date).from()), eq(AccountingCalendarFixture.KOLKATA.day(date).to()), any()))
                 .thenReturn(Map.of("capturedAmount", new BigDecimal("1000.00")));
-        when(orderTotalsClient.getDailyPaidOrderTotal(date)).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to())).thenReturn(Map.of());
         when(breakRepository.existsByKindAndSubjectIdAndResolvedAtIsNull(any(), any())).thenReturn(false);
-        when(breakRepository.existsByKindAndSubjectIdCreatedToday(any(), any())).thenReturn(true);
+        when(breakRepository.existsByKindAndSubjectIdStartedWithin(any(), any(), any(), any())).thenReturn(true);
 
         reconciliationService.executeRun(date);
 
@@ -220,10 +220,10 @@ class MoneyReconciliationJobTest {
     void aRestaurantPayableThatDisagreesWithTheOrdersIsABreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(any(), any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
         // The orders say 900 was earned; the ledger booked nothing.
-        when(orderTotalsClient.getDailyPayables(date))
+        when(orderTotalsClient.getDailyPayables(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to()))
                 .thenReturn(Map.of("restaurantPayable", new BigDecimal("900.00")));
 
         reconciliationService.executeRun(date);
@@ -242,9 +242,9 @@ class MoneyReconciliationJobTest {
     void aDriverPayableThatDisagreesWithTheOrdersIsABreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(any(), any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPayables(date))
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPayables(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to()))
                 .thenReturn(Map.of("driverPayable", new BigDecimal("150.50")));
 
         reconciliationService.executeRun(date);
@@ -262,9 +262,9 @@ class MoneyReconciliationJobTest {
     void payablesThatMatchTheOrdersFileNoBreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(any(), any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPayables(date)).thenReturn(Map.of(
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPayables(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to())).thenReturn(Map.of(
                 "restaurantPayable", BigDecimal.ZERO, "driverPayable", BigDecimal.ZERO));
 
         reconciliationService.executeRun(date);
@@ -281,9 +281,9 @@ class MoneyReconciliationJobTest {
     void anUnreachableOrderServiceMakesTheRunPartialRatherThanFilingABreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(paymentTotalsClient.getDailyTotals(any(), any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPayables(date))
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPayables(AccountingCalendarFixture.KOLKATA.day(date).from(), AccountingCalendarFixture.KOLKATA.day(date).to()))
                 .thenThrow(new com.fooddelivery.ledger.client.ReconciliationClientException("down"));
 
         ReconciliationRun run = reconciliationService.executeRun(date);
@@ -307,9 +307,9 @@ class MoneyReconciliationJobTest {
     void anUnreachablePaymentServiceMakesTheRunPartialRatherThanFilingABreak() {
         LocalDate date = LocalDate.now().minusDays(1);
         allLedgerSumsAreZero();
-        when(orderTotalsClient.getDailyPaidOrderTotal(any())).thenReturn(Map.of());
-        when(orderTotalsClient.getDailyPayables(any())).thenReturn(Map.of());
-        when(paymentTotalsClient.getDailyTotals(any(), any()))
+        when(orderTotalsClient.getDailyPaidOrderTotal(any(), any())).thenReturn(Map.of());
+        when(orderTotalsClient.getDailyPayables(any(), any())).thenReturn(Map.of());
+        when(paymentTotalsClient.getDailyTotals(any(), any(), any()))
                 .thenThrow(new com.fooddelivery.ledger.client.ReconciliationClientException("down"));
 
         ReconciliationRun run = reconciliationService.executeRun(date);

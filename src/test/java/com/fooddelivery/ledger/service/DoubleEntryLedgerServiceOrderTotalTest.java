@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,7 +86,7 @@ class DoubleEntryLedgerServiceOrderTotalTest {
                 .ownerType(ownerType)
                 .balance(new BigDecimal("10000.00"))
                 .currency("INR")
-                .createdAt(java.time.OffsetDateTime.now())
+                .createdAt(java.time.Instant.now())
                 .kind(com.fooddelivery.common.enums.LedgerAccountType.Kind.PAYABLE)
                 .lockVersion(0)
                 .build();
@@ -103,7 +103,7 @@ class DoubleEntryLedgerServiceOrderTotalTest {
                 .direction(direction)
                 .category(category)
                 .amount(new BigDecimal(amount))
-                .createdAt(OffsetDateTime.now())
+                .createdAt(Instant.now())
                 .producer("TEST_PRODUCER")
                 .build());
     }

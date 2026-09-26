@@ -2,7 +2,7 @@ package com.fooddelivery.ledger.dto;
 
 import com.fooddelivery.common.enums.ChargeCategory;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;@lombok.AllArgsConstructor
 @lombok.NoArgsConstructor
 @lombok.Data
@@ -20,7 +20,7 @@ public class LedgerTransactionDto {
     @jakarta.validation.constraints.NotNull
     private BigDecimal amount;
     @jakarta.validation.constraints.NotNull
-    private java.time.OffsetDateTime date;
+    private java.time.Instant date;
 
 
 }

@@ -16,7 +16,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,7 +62,7 @@ public class PayoutDetailTest {
                 .category(ChargeCategory.ORDER_TOTAL)
                 .direction(TransactionDirection.CREDIT)
                 .amount(new BigDecimal("100.00"))
-                .entryCreatedAt(OffsetDateTime.now())
+                .entryCreatedAt(Instant.now())
                 .active(true)
                 .build();
 
@@ -94,8 +94,8 @@ public class PayoutDetailTest {
                 .payeeType("RESTAURANT")
                 .payeeId(UUID.randomUUID())
                 .payeeDisplayName("Kanti Sweets")
-                .periodFrom(OffsetDateTime.parse("2026-08-01T00:00:00Z"))
-                .periodTo(OffsetDateTime.parse("2026-09-01T00:00:00Z"))
+                .periodFrom(Instant.parse("2026-08-01T00:00:00Z"))
+                .periodTo(Instant.parse("2026-09-01T00:00:00Z"))
                 .amount(new BigDecimal("100.00"))
                 .currency("INR")
                 .status(PayoutStatus.PAID)
@@ -103,8 +103,8 @@ public class PayoutDetailTest {
                 .bankReference("UTR-42")
                 .createdBy(createdBy)
                 .paidBy(paidBy)
-                .createdAt(OffsetDateTime.parse("2026-09-01T10:00:00Z"))
-                .paidAt(OffsetDateTime.parse("2026-09-02T10:00:00Z"))
+                .createdAt(Instant.parse("2026-09-01T10:00:00Z"))
+                .paidAt(Instant.parse("2026-09-02T10:00:00Z"))
                 .build();
 
         when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(payout));

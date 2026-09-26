@@ -26,7 +26,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
  * The payout lifecycle.
  *
  * <p>This class was once a single test method with an empty body. That is the direct reason every
- * payout and cash remittance threw at runtime: the ledger transaction ids were v4 while the ledger
+ * payout threw at runtime: the ledger transaction ids were v4 while the ledger
  * only accepts an id it can re-derive from (producer, reference, leg), and nothing noticed. The
  * derivability of each id is therefore asserted here on every transition.
  */
@@ -76,7 +76,7 @@ public class PayoutServiceTest {
     private CreatePayoutRequest request() {
         return CreatePayoutRequest.builder()
                 .payeeType("RESTAURANT").payeeId(payeeId)
-                .periodTo(OffsetDateTime.parse("2026-09-07T00:00:00Z")).build();
+                .periodTo(Instant.parse("2026-09-07T00:00:00Z")).build();
     }
 
     private LedgerEntry entry(String amount, TransactionDirection direction) {
@@ -84,7 +84,7 @@ public class PayoutServiceTest {
                 .id(UUID.randomUUID()).accountId(accountId).referenceId(UUID.randomUUID())
                 .amount(new BigDecimal(amount)).direction(direction)
                 .category(com.fooddelivery.common.enums.ChargeCategory.FOOD_COST)
-                .createdAt(OffsetDateTime.parse("2026-09-01T00:00:00Z")).build();
+                .createdAt(Instant.parse("2026-09-01T00:00:00Z")).build();
     }
 
     private void payableAccountExists() {

@@ -61,7 +61,7 @@ public class MoneyStartupInvariantsTest {
     /**
      * The property the check exists to hold: the five fixed accounts are five different accounts.
      * PayoutService addressed BANK and PAYOUT_IN_TRANSIT with the same all-zeros literal that
-     * PLATFORM_CLEARING uses, so cash remittances and payouts landed in different bank accounts.
+     * PLATFORM_CLEARING uses, so money meant for three different bank accounts landed in one.
      */
     @Test
     void theFixedLedgerAccountIdsAreDistinct() {
