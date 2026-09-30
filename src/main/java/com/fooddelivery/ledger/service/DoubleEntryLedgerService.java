@@ -14,10 +14,6 @@ import com.fooddelivery.ledger.repository.ILedgerEntryRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -28,7 +24,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
@@ -38,18 +33,15 @@ public class DoubleEntryLedgerService {
 
     private final ILedgerAccountRepository accountRepository;
     private final ILedgerEntryRepository entryRepository;
-    private final EntityManager entityManager;
 
     /** Asserted as INR at startup by MoneyStartupInvariants; never defaulted silently here. */
     @org.springframework.beans.factory.annotation.Value("${platform.default-currency:INR}")
     private String platformCurrency;
 
     public DoubleEntryLedgerService(ILedgerAccountRepository accountRepository,
-                                    ILedgerEntryRepository entryRepository,
-                                    EntityManager entityManager) {
+                                    ILedgerEntryRepository entryRepository) {
         this.accountRepository = accountRepository;
         this.entryRepository = entryRepository;
-        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -224,74 +216,28 @@ public class DoubleEntryLedgerService {
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<LedgerTransactionDto> getTransactions(UUID transactionId, UUID ownerId, LedgerAccountType ownerType, ChargeCategory category, TransactionDirection direction, org.springframework.data.domain.Pageable pageable) {
-        UUID accountId = null;
-        if (ownerId != null && ownerType != null) {
-            java.util.Optional<LedgerAccount> accountOpt = accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType);
-            if (accountOpt.isPresent()) {
-                accountId = accountOpt.get().getId();
-            } else {
-                return org.springframework.data.domain.Page.empty(pageable);
-            }
+        // Direction is a property of an immutable ledger entry, not of a whole double-entry
+        // transaction. Returning the filtered entries directly preserves the predicate the
+        // administrator supplied and keeps the page count aligned with visible result rows.
+        return getEntries(transactionId, ownerId, ownerType, category, direction, pageable)
+                .map(this::toTransactionDto);
+    }
+
+    private LedgerTransactionDto toTransactionDto(LedgerEntry entry) {
+        LedgerTransactionDto dto = new LedgerTransactionDto();
+        dto.setEntryId(entry.getId());
+        dto.setTransactionId(entry.getTransactionId());
+        dto.setCategory(entry.getCategory());
+        dto.setAccountId(entry.getAccountId());
+        dto.setDirection(entry.getDirection());
+        dto.setAmount(entry.getAmount());
+        dto.setDate(entry.getCreatedAt());
+        if (entry.getDirection() == TransactionDirection.DEBIT) {
+            dto.setFromAccountId(entry.getAccountId());
+        } else {
+            dto.setToAccountId(entry.getAccountId());
         }
-        org.springframework.data.jpa.domain.Specification<LedgerEntry> spec = com.fooddelivery.ledger.repository.LedgerEntrySpecification.filterBy(transactionId, accountId, category, direction);
-        
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<UUID> query = cb.createQuery(UUID.class);
-        Root<LedgerEntry> root = query.from(LedgerEntry.class);
-        query.select(root.get("transactionId")).distinct(true);
-        if (spec != null) {
-            query.where(spec.toPredicate(root, query, cb));
-        }
-        
-        CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        Root<LedgerEntry> countRoot = countQuery.from(LedgerEntry.class);
-        countQuery.select(cb.countDistinct(countRoot.get("transactionId")));
-        if (spec != null) {
-            countQuery.where(spec.toPredicate(countRoot, countQuery, cb));
-        }
-        Long total = entityManager.createQuery(countQuery).getSingleResult();
-        
-        CriteriaQuery<Object[]> sortQuery = cb.createQuery(Object[].class);
-        Root<LedgerEntry> sortRoot = sortQuery.from(LedgerEntry.class);
-        sortQuery.multiselect(sortRoot.get("transactionId"), cb.greatest(sortRoot.<Instant>get("createdAt")));
-        sortQuery.groupBy(sortRoot.get("transactionId"));
-        if (spec != null) {
-            sortQuery.where(spec.toPredicate(sortRoot, sortQuery, cb));
-        }
-        sortQuery.orderBy(cb.desc(cb.greatest(sortRoot.<Instant>get("createdAt"))));
-        
-        List<Object[]> sortedResult = entityManager.createQuery(sortQuery).setFirstResult((int) pageable.getOffset()).setMaxResults(pageable.getPageSize()).getResultList();
-        List<UUID> transactionIds = sortedResult.stream().map(obj -> (UUID) obj[0]).collect(Collectors.toList());
-        
-        if (transactionIds.isEmpty()) {
-            return org.springframework.data.domain.Page.empty(pageable);
-        }
-        
-        List<LedgerEntry> entries = entryRepository.findByTransactionIdIn(transactionIds);
-        Map<String, List<LedgerEntry>> grouped = entries.stream().collect(Collectors.groupingBy(e -> e.getTransactionId().toString() + "_" + e.getCategory().name()));
-        
-        List<LedgerTransactionDto> dtos = grouped.values().stream().map(group -> {
-            LedgerTransactionDto dto = new LedgerTransactionDto();
-            LedgerEntry first = group.get(0);
-            dto.setTransactionId(first.getTransactionId());
-            dto.setCategory(first.getCategory());
-            dto.setAmount(first.getAmount());
-            dto.setDate(first.getCreatedAt());
-            for (LedgerEntry e : group) {
-                if (e.getDirection() == TransactionDirection.DEBIT) {
-                    dto.setFromAccountId(e.getAccountId());
-                } else {
-                    dto.setToAccountId(e.getAccountId());
-                }
-            }
-            return dto;
-        }).collect(Collectors.toList());
-        
-        List<LedgerTransactionDto> sortedDtos = new ArrayList<>();
-        for (UUID tId : transactionIds) {
-            sortedDtos.addAll(dtos.stream().filter(d -> d.getTransactionId().equals(tId)).collect(Collectors.toList()));
-        }
-        return new org.springframework.data.domain.PageImpl<>(sortedDtos, pageable, total);
+        return dto;
     }
 
     /**

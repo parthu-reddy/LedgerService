@@ -13,17 +13,23 @@ import com.fooddelivery.ledger.entity.LedgerAccount;
 import com.fooddelivery.ledger.entity.LedgerEntry;
 import com.fooddelivery.ledger.entity.Payout;
 import com.fooddelivery.ledger.entity.PayoutLine;
+import com.fooddelivery.ledger.entity.PayoutOperation;
+import com.fooddelivery.ledger.entity.PayoutOperationAction;
 import com.fooddelivery.ledger.entity.PayoutStatus;
 import com.fooddelivery.ledger.repository.ILedgerAccountRepository;
 import com.fooddelivery.ledger.repository.ILedgerEntryRepository;
 import com.fooddelivery.ledger.repository.PayoutLineRepository;
+import com.fooddelivery.ledger.repository.PayoutOperationRepository;
 import com.fooddelivery.ledger.repository.PayoutRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -34,8 +40,16 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -50,6 +64,7 @@ public class PayoutServiceTest {
 
     @Mock private PayoutRepository payoutRepository;
     @Mock private PayoutLineRepository payoutLineRepository;
+    @Mock private PayoutOperationRepository payoutOperationRepository;
     @Mock private ILedgerAccountRepository accountRepository;
     @Mock private ILedgerEntryRepository entryRepository;
     @Mock private BeneficiaryClient beneficiaryClient;
@@ -67,10 +82,14 @@ public class PayoutServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        payoutService = new PayoutService(payoutRepository, payoutLineRepository, accountRepository,
+        payoutService = new PayoutService(payoutRepository, payoutLineRepository, payoutOperationRepository, accountRepository,
                 entryRepository, beneficiaryClient, ownerNameResolver, stateMachine,
                 doubleEntryLedgerService, new ObjectMapper());
         ReflectionTestUtils.setField(payoutService, "fourEyesEnabled", true);
+        when(payoutOperationRepository.insertIfAbsent(
+                any(UUID.class), any(UUID.class), anyString(), anyString(), anyString(), any(UUID.class),
+                anyString(), anyString(), anyString(), nullable(String.class), nullable(String.class),
+                nullable(UUID.class))).thenReturn(1);
     }
 
     private CreatePayoutRequest request() {
@@ -233,21 +252,28 @@ public class PayoutServiceTest {
     @Test
     void approveRefusesTheAdministratorWhoRaisedIt() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.DRAFT).createdBy(adminId).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
 
         IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> payoutService.approve(payout.getId(), adminId));
+                () -> payoutService.approve(payout.getId(), adminId, "approve-own"));
         assertTrue(e.getMessage().contains("Four-eyes"), e.getMessage());
         verify(payoutRepository, never()).save(any());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
     }
 
     @Test
     void approveAcceptsASecondAdministrator() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.DRAFT).createdBy(adminId).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
 
-        payoutService.approve(payout.getId(), otherAdminId);
+        payoutService.approve(payout.getId(), otherAdminId, "approve-second-admin");
 
+        verify(payoutOperationRepository).insertIfAbsent(
+                any(UUID.class), eq(payout.getId()), eq(PayoutOperationAction.APPROVE.name()),
+                eq("approve-second-admin"), anyString(), eq(otherAdminId), eq(PayoutStatus.DRAFT.name()),
+                eq(PayoutStatus.APPROVED.name()), eq("APPLIED"), isNull(), isNull(), isNull());
         verify(stateMachine).transitionTo(payout, PayoutStatus.APPROVED);
         assertEquals(otherAdminId, payout.getApprovedBy());
         assertNotNull(payout.getApprovedAt());
@@ -259,9 +285,9 @@ public class PayoutServiceTest {
     void markPaidMovesTheMoneyOutOfTransitAndRecordsTheBankReference() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
                 .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
 
-        payoutService.markPaid(payout.getId(), "UTR-99", adminId);
+        payoutService.markPaid(payout.getId(), " UTR-99 ", adminId, "mark-paid-1");
 
         LedgerTransactionCommand cmd = recordedCommand();
         assertEquals("PAID", cmd.getLeg());
@@ -279,11 +305,11 @@ public class PayoutServiceTest {
     void failReversesToThePayableAndFreesTheLines() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
                 .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
         PayoutLine line = PayoutLine.builder().id(UUID.randomUUID()).payoutId(payout.getId()).active(true).build();
         when(payoutLineRepository.findByPayoutId(payout.getId())).thenReturn(List.of(line));
 
-        payoutService.fail(payout.getId(), "bank rejected the account", adminId);
+        payoutService.fail(payout.getId(), " bank rejected the account ", adminId, "fail-1");
 
         LedgerTransactionCommand cmd = recordedCommand();
         assertEquals("FAIL", cmd.getLeg());
@@ -300,11 +326,11 @@ public class PayoutServiceTest {
     void cancelReversesToThePayableAndFreesTheLines() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.DRAFT)
                 .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
         PayoutLine line = PayoutLine.builder().id(UUID.randomUUID()).payoutId(payout.getId()).active(true).build();
         when(payoutLineRepository.findByPayoutId(payout.getId())).thenReturn(List.of(line));
 
-        payoutService.cancel(payout.getId(), adminId);
+        payoutService.cancel(payout.getId(), adminId, "cancel-1");
 
         LedgerTransactionCommand cmd = recordedCommand();
         assertEquals("CANCEL", cmd.getLeg());
@@ -315,13 +341,215 @@ public class PayoutServiceTest {
     }
 
     @Test
-    void markPaidIsIdempotent() {
+    void aNewMarkPaidKeyCannotReopenAnAlreadyPaidPayout() {
         Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.PAID).build();
-        when(payoutRepository.findById(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
 
-        payoutService.markPaid(payout.getId(), "UTR-99", adminId);
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> payoutService.markPaid(payout.getId(), "UTR-99", adminId, "different-key"));
 
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
         verify(doubleEntryLedgerService, never()).record(any());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+    }
+
+    @Test
+    void markPaidClaimsAnImmutableAuditRecordBeforeItPostsTheLedgerMovement() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutOperationRepository.findByIdempotencyKey("paid-audit-key")).thenReturn(Optional.empty());
+
+        payoutService.markPaid(payout.getId(), "UTR-100", adminId, "paid-audit-key");
+
+        ArgumentCaptor<String> requestHash = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<UUID> ledgerTransactionId = ArgumentCaptor.forClass(UUID.class);
+        InOrder ordered = inOrder(payoutOperationRepository, doubleEntryLedgerService);
+        ordered.verify(payoutOperationRepository).insertIfAbsent(
+                any(UUID.class), eq(payout.getId()), eq(PayoutOperationAction.MARK_PAID.name()),
+                eq("paid-audit-key"), requestHash.capture(), eq(adminId), eq(PayoutStatus.APPROVED.name()),
+                eq(PayoutStatus.PAID.name()), eq("APPLIED"), eq("UTR-100"), isNull(), ledgerTransactionId.capture());
+        ordered.verify(doubleEntryLedgerService).record(any(LedgerTransactionCommand.class));
+
+        assertNotNull(ledgerTransactionId.getValue());
+        assertEquals(64, requestHash.getValue().length());
+    }
+
+    @Test
+    void anExactPayoutActionReplayDoesNotLockOrPostAnotherLedgerMovement() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutOperationRepository.findByIdempotencyKey("replay-key")).thenReturn(Optional.empty());
+
+        payoutService.markPaid(payout.getId(), "UTR-101", adminId, "replay-key");
+        ArgumentCaptor<String> requestHash = ArgumentCaptor.forClass(String.class);
+        verify(payoutOperationRepository).insertIfAbsent(
+                any(UUID.class), any(UUID.class), anyString(), eq("replay-key"), requestHash.capture(), any(UUID.class),
+                anyString(), anyString(), anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+
+        clearInvocations(payoutRepository, payoutOperationRepository, payoutLineRepository,
+                doubleEntryLedgerService, stateMachine);
+        when(payoutOperationRepository.findByIdempotencyKey("replay-key"))
+                .thenReturn(Optional.of(PayoutOperation.builder()
+                        .payoutId(payout.getId())
+                        .action(PayoutOperationAction.MARK_PAID)
+                        .actorId(adminId)
+                        .requestHash(requestHash.getValue())
+                        .build()));
+
+        payoutService.markPaid(payout.getId(), "UTR-101", adminId, "replay-key");
+
+        verify(payoutOperationRepository).findByIdempotencyKey("replay-key");
+        verify(payoutRepository, never()).findByIdForUpdate(any());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+        verifyNoInteractions(doubleEntryLedgerService);
+        verifyNoInteractions(payoutLineRepository);
+    }
+
+    @Test
+    void reusingAnActionKeyWithChangedSettlementInputIsAConflict() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutOperationRepository.findByIdempotencyKey("changed-input-key")).thenReturn(Optional.empty());
+
+        payoutService.markPaid(payout.getId(), "UTR-102", adminId, "changed-input-key");
+        ArgumentCaptor<String> requestHash = ArgumentCaptor.forClass(String.class);
+        verify(payoutOperationRepository).insertIfAbsent(
+                any(UUID.class), any(UUID.class), anyString(), eq("changed-input-key"), requestHash.capture(), any(UUID.class),
+                anyString(), anyString(), anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+
+        clearInvocations(payoutRepository, payoutOperationRepository, payoutLineRepository,
+                doubleEntryLedgerService, stateMachine);
+        when(payoutOperationRepository.findByIdempotencyKey("changed-input-key"))
+                .thenReturn(Optional.of(PayoutOperation.builder()
+                        .payoutId(payout.getId())
+                        .action(PayoutOperationAction.MARK_PAID)
+                        .actorId(adminId)
+                        .requestHash(requestHash.getValue())
+                        .build()));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> payoutService.markPaid(payout.getId(), "UTR-103", adminId, "changed-input-key"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        verify(payoutRepository, never()).findByIdForUpdate(any());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+        verifyNoInteractions(doubleEntryLedgerService);
+    }
+
+    @Test
+    void reusingAnOperationKeyForAnotherPayoutActionIsAConflict() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutOperationRepository.findByIdempotencyKey("cross-action-key")).thenReturn(Optional.empty());
+
+        payoutService.markPaid(payout.getId(), "UTR-104", adminId, "cross-action-key");
+        ArgumentCaptor<String> requestHash = ArgumentCaptor.forClass(String.class);
+        verify(payoutOperationRepository).insertIfAbsent(
+                any(UUID.class), any(UUID.class), anyString(), eq("cross-action-key"), requestHash.capture(), any(UUID.class),
+                anyString(), anyString(), anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+
+        clearInvocations(payoutRepository, payoutOperationRepository, payoutLineRepository,
+                doubleEntryLedgerService, stateMachine);
+        when(payoutOperationRepository.findByIdempotencyKey("cross-action-key"))
+                .thenReturn(Optional.of(PayoutOperation.builder()
+                        .payoutId(payout.getId())
+                        .action(PayoutOperationAction.MARK_PAID)
+                        .actorId(adminId)
+                        .requestHash(requestHash.getValue())
+                        .build()));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> payoutService.fail(payout.getId(), "bank rejected the account", adminId, "cross-action-key"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        verify(payoutRepository, never()).findByIdForUpdate(any());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+        verifyNoInteractions(doubleEntryLedgerService);
+    }
+
+    @Test
+    void aCrossPayoutKeyClaimRaceReturnsConflictBeforeAnyLedgerMovement() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.APPROVED)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        PayoutOperation winningOperation = PayoutOperation.builder()
+                .payoutId(UUID.randomUUID())
+                .action(PayoutOperationAction.MARK_PAID)
+                .actorId(adminId)
+                .requestHash("a".repeat(64))
+                .build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        when(payoutOperationRepository.findByIdempotencyKey("cross-payout-key"))
+                .thenReturn(Optional.empty(), Optional.empty(), Optional.of(winningOperation));
+        when(payoutOperationRepository.insertIfAbsent(
+                any(UUID.class), any(UUID.class), anyString(), anyString(), anyString(), any(UUID.class),
+                anyString(), anyString(), anyString(), nullable(String.class), nullable(String.class),
+                nullable(UUID.class))).thenReturn(0);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> payoutService.markPaid(payout.getId(), "UTR-105", adminId, "cross-payout-key"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        verify(payoutOperationRepository, times(3)).findByIdempotencyKey("cross-payout-key");
+        verifyNoInteractions(doubleEntryLedgerService);
+    }
+
+    @Test
+    void invalidSettlementInputsAreRejectedBeforeAnyPayoutOrLedgerAccess() {
+        assertAll(
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.markPaid(UUID.randomUUID(), null, adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.markPaid(UUID.randomUUID(), "   ", adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.markPaid(UUID.randomUUID(), "UTR 123", adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.markPaid(UUID.randomUUID(), "A".repeat(129), adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.fail(UUID.randomUUID(), null, adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.fail(UUID.randomUUID(), " no ", adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.fail(UUID.randomUUID(), "reason\nwith control", adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.cancel(UUID.randomUUID(), adminId, "  ")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.approve(null, adminId, "valid-key")),
+                () -> assertThrows(IllegalArgumentException.class,
+                        () -> payoutService.approve(UUID.randomUUID(), null, "valid-key"))
+        );
+
+        verifyNoInteractions(payoutRepository, payoutOperationRepository, payoutLineRepository,
+                doubleEntryLedgerService, stateMachine);
+    }
+
+    @Test
+    void aCompetingStateTransitionReturnsConflictAfterThePayoutLock() {
+        Payout payout = Payout.builder().id(UUID.randomUUID()).status(PayoutStatus.PAID)
+                .payeeType("RESTAURANT").payeeId(payeeId).amount(new BigDecimal("350.00")).build();
+        when(payoutRepository.findByIdForUpdate(payout.getId())).thenReturn(Optional.of(payout));
+        doThrow(new IllegalStateException("Can only fail DRAFT or APPROVED payouts"))
+                .when(stateMachine).validateTransition(PayoutStatus.PAID, PayoutStatus.FAILED);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> payoutService.fail(payout.getId(), "bank returned an error", adminId, "competing-state-key"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        verify(payoutOperationRepository, never()).insertIfAbsent(
+                any(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(),
+                anyString(), nullable(String.class), nullable(String.class), nullable(UUID.class));
+        verifyNoInteractions(doubleEntryLedgerService);
     }
 
     // --- reads --------------------------------------------------------------------------------

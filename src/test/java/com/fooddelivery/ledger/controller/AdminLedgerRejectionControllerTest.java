@@ -88,7 +88,14 @@ public class AdminLedgerRejectionControllerTest {
         UUID id = UUID.randomUUID();
         LedgerRejection rejection = unresolved(id);
         when(rejectionRepository.findById(id)).thenReturn(Optional.of(rejection));
-        when(rejectionRepository.save(any(LedgerRejection.class))).thenAnswer(i -> i.getArgument(0));
+        when(rejectionRepository.resolveIfUnresolved(eq(id), any(Instant.class), eq("user"),
+                eq("replayed by the producer on 2026-09-09")))
+                .thenAnswer(i -> {
+                    rejection.setResolvedAt(i.getArgument(1));
+                    rejection.setResolvedBy(i.getArgument(2));
+                    rejection.setResolutionNote(i.getArgument(3));
+                    return 1;
+                });
 
         mockMvc.perform(post("/api/v1/internal/admin/ledger/rejections/" + id + "/resolve")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,6 +108,7 @@ public class AdminLedgerRejectionControllerTest {
         assertNotNull(rejection.getResolvedAt());
         assertNotNull(rejection.getResolvedBy());
         assertEquals("replayed by the producer on 2026-09-09", rejection.getResolutionNote());
+        verify(rejectionRepository, never()).save(any());
     }
 
     /** The note is the audit record of why money that was refused no longer needs booking. */
@@ -127,6 +135,8 @@ public class AdminLedgerRejectionControllerTest {
         already.setResolvedAt(Instant.parse("2026-09-01T10:00:00Z"));
         already.setResolvedBy("first-admin");
         already.setResolutionNote("the original note");
+        when(rejectionRepository.resolveIfUnresolved(eq(id), any(Instant.class), eq("user"),
+                eq("a second opinion"))).thenReturn(0);
         when(rejectionRepository.findById(id)).thenReturn(Optional.of(already));
 
         mockMvc.perform(post("/api/v1/internal/admin/ledger/rejections/" + id + "/resolve")
@@ -137,6 +147,38 @@ public class AdminLedgerRejectionControllerTest {
                 .andExpect(jsonPath("$.resolvedBy").value("first-admin"))
                 .andExpect(jsonPath("$.resolutionNote").value("the original note"));
 
+        verify(rejectionRepository, never()).save(any());
+    }
+
+    /**
+     * The losing request must return the decision that won the database compare-and-set. Returning
+     * the caller's stale entity would make the audit trail appear overwritten even if the DB row
+     * itself was protected.
+     */
+    @Test
+    @WithMockUser(username = "second-admin", roles = "ADMIN")
+    void concurrentResolutionReturnsTheFirstStoredSignOff() throws Exception {
+        UUID id = UUID.randomUUID();
+        LedgerRejection firstDecision = unresolved(id);
+        firstDecision.setResolvedAt(Instant.parse("2026-09-30T10:00:00Z"));
+        firstDecision.setResolvedBy("first-admin");
+        firstDecision.setResolutionNote("producer replay verified");
+
+        when(rejectionRepository.resolveIfUnresolved(eq(id), any(Instant.class), eq("second-admin"),
+                eq("a later resolution note"))).thenReturn(0);
+        when(rejectionRepository.findById(id)).thenReturn(Optional.of(firstDecision));
+
+        mockMvc.perform(post("/api/v1/internal/admin/ledger/rejections/" + id + "/resolve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\":\"a later resolution note\"}")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolvedBy").value("first-admin"))
+                .andExpect(jsonPath("$.resolvedAt").value("2026-09-30T10:00:00Z"))
+                .andExpect(jsonPath("$.resolutionNote").value("producer replay verified"));
+
+        verify(rejectionRepository).resolveIfUnresolved(eq(id), any(Instant.class), eq("second-admin"),
+                eq("a later resolution note"));
         verify(rejectionRepository, never()).save(any());
     }
 

@@ -38,5 +38,13 @@ eureka:
 payouts:
   four-eyes: true
 idempotency:
+  filter:
+    # Payout transitions own their durable idempotency result in LedgerService. The CommonLibrary
+    # filter treats each `*` as one path segment, so only these four POST actions bypass Redis.
+    bypass-routes: >-
+      POST:/api/v1/internal/admin/payouts/*/approve,
+      POST:/api/v1/internal/admin/payouts/*/mark-paid,
+      POST:/api/v1/internal/admin/payouts/*/fail,
+      POST:/api/v1/internal/admin/payouts/*/cancel
   sweep:
     retention-days: 400

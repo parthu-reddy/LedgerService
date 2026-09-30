@@ -87,7 +87,7 @@ public class LedgerMcpService {
         }
     }
 
-    @Tool(description = "Get ledger transactions for admin. Provide page, size, transactionId, ownerId, ownerType, category, direction (all optional except page/size).")
+    @Tool(description = "Get directional ledger entries for admin. Each result retains its authoritative account and CREDIT or DEBIT direction. Provide page, size, transactionId, ownerId, ownerType, category, direction (all optional except page/size).")
     public String getTransactions(int page, int size, String transactionId, String ownerId, String ownerType, String category, String direction) {
         try {
             requireAdminRole();

@@ -7,8 +7,10 @@ import com.fooddelivery.ledger.entity.LedgerAccount;
 import com.fooddelivery.ledger.entity.LedgerEntry;
 import com.fooddelivery.ledger.repository.ILedgerAccountRepository;
 import com.fooddelivery.ledger.repository.ILedgerEntryRepository;
+import com.fooddelivery.ledger.dto.LedgerTransactionDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -93,9 +95,9 @@ class DoubleEntryLedgerServiceOrderTotalTest {
         return accountRepository.save(account).getId();
     }
 
-    private void saveEntry(UUID transactionId, UUID referenceId, UUID accountId,
+    private UUID saveEntry(UUID transactionId, UUID referenceId, UUID accountId,
                            TransactionDirection direction, String amount, ChargeCategory category) {
-        entryRepository.save(LedgerEntry.builder()
+        return entryRepository.save(LedgerEntry.builder()
                 .id(UUID.randomUUID())
                 .transactionId(transactionId)
                 .referenceId(referenceId)
@@ -105,7 +107,7 @@ class DoubleEntryLedgerServiceOrderTotalTest {
                 .amount(new BigDecimal(amount))
                 .createdAt(Instant.now())
                 .producer("TEST_PRODUCER")
-                .build());
+                .build()).getId();
     }
 
     /** Mirrors recordTransaction for a customer paying the platform: debit customer, credit platform. */
@@ -195,5 +197,43 @@ class DoubleEntryLedgerServiceOrderTotalTest {
                 .isNotNull()
                 .usingComparator(BigDecimal::compareTo)
                 .isEqualTo(BigDecimal.ZERO);
+    }
+
+    /**
+     * A direction is a property of one ledger entry. Returning a grouped transaction after selecting
+     * a CREDIT entry used to bring its DEBIT leg back into the response and erase that distinction.
+     */
+    @Test
+    void transactionExplorerPreservesTheFilteredEntryDirectionAndAccount() {
+        UUID transactionId = UUID.randomUUID();
+        UUID referenceId = UUID.randomUUID();
+        UUID debitEntryId = saveEntry(transactionId, referenceId, customerAccountId,
+                TransactionDirection.DEBIT, "120.50", ChargeCategory.FOOD_COST);
+        UUID creditEntryId = saveEntry(transactionId, referenceId, platformAccountId,
+                TransactionDirection.CREDIT, "120.50", ChargeCategory.FOOD_COST);
+
+        var credits = ledgerService.getTransactions(null, null, null, ChargeCategory.FOOD_COST,
+                TransactionDirection.CREDIT, PageRequest.of(0, 20));
+
+        assertThat(credits.getTotalElements()).isEqualTo(1);
+        assertThat(credits.getContent()).singleElement().satisfies(entry -> {
+            assertThat(entry.getEntryId()).isEqualTo(creditEntryId);
+            assertThat(entry.getTransactionId()).isEqualTo(transactionId);
+            assertThat(entry.getDirection()).isEqualTo(TransactionDirection.CREDIT);
+            assertThat(entry.getAccountId()).isEqualTo(platformAccountId);
+            assertThat(entry.getFromAccountId()).isNull();
+            assertThat(entry.getToAccountId()).isEqualTo(platformAccountId);
+            assertThat(entry.getAmount()).usingComparator(BigDecimal::compareTo)
+                    .isEqualTo(new BigDecimal("120.50"));
+        });
+
+        var allDirections = ledgerService.getTransactions(null, null, null, ChargeCategory.FOOD_COST,
+                null, PageRequest.of(0, 20));
+        assertThat(allDirections.getTotalElements()).isEqualTo(2);
+        assertThat(allDirections.getContent())
+                .extracting(LedgerTransactionDto::getEntryId, LedgerTransactionDto::getDirection)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(debitEntryId, TransactionDirection.DEBIT),
+                        org.assertj.core.groups.Tuple.tuple(creditEntryId, TransactionDirection.CREDIT));
     }
 }

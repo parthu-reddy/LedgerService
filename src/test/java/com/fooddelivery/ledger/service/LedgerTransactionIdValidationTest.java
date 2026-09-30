@@ -9,7 +9,6 @@ import com.fooddelivery.common.util.DeterministicIdUtils;
 import com.fooddelivery.ledger.entity.LedgerAccount;
 import com.fooddelivery.ledger.repository.ILedgerAccountRepository;
 import com.fooddelivery.ledger.repository.ILedgerEntryRepository;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +39,7 @@ public class LedgerTransactionIdValidationTest {
     void setUp() {
         accountRepo = mock(ILedgerAccountRepository.class);
         entryRepo = mock(ILedgerEntryRepository.class);
-        service = new DoubleEntryLedgerService(accountRepo, entryRepo, mock(EntityManager.class));
+        service = new DoubleEntryLedgerService(accountRepo, entryRepo);
     }
 
     private LedgerTransactionCommand command(UUID txId, UUID reference, String leg) {

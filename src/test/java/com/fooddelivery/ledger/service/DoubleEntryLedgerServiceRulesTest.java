@@ -16,7 +16,6 @@ import com.fooddelivery.common.enums.ChargeCategory;
 import com.fooddelivery.common.exception.LedgerRejectedException;
 import com.fooddelivery.common.util.DeterministicIdUtils;
 import com.fooddelivery.ledger.entity.LedgerAccount;
-import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -28,14 +27,12 @@ public class DoubleEntryLedgerServiceRulesTest {
     private DoubleEntryLedgerService service;
     private ILedgerAccountRepository accountRepo;
     private ILedgerEntryRepository entryRepo;
-    private EntityManager entityManager;
 
     @BeforeEach
     void setUp() {
         accountRepo = mock(ILedgerAccountRepository.class);
         entryRepo = mock(ILedgerEntryRepository.class);
-        entityManager = mock(EntityManager.class);
-        service = new DoubleEntryLedgerService(accountRepo, entryRepo, entityManager);
+        service = new DoubleEntryLedgerService(accountRepo, entryRepo);
     }
 
     @Test

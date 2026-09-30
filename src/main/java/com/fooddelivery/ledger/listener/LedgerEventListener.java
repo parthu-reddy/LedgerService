@@ -10,6 +10,7 @@ import com.fooddelivery.common.util.KafkaHeaderUtils;
 import com.fooddelivery.ledger.entity.LedgerRejection;
 import com.fooddelivery.ledger.repository.ILedgerRejectionRepository;
 import com.fooddelivery.ledger.service.DoubleEntryLedgerService;
+import com.fooddelivery.ledger.service.LedgerRejectionRecorder;
 import com.fooddelivery.common.entity.IdempotencyKey;
 import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 
@@ -36,20 +37,23 @@ public class LedgerEventListener {
     private final ObjectMapper objectMapper;
     private final IIdempotencyKeyRepository idempotencyKeyRepository;
     private final ILedgerRejectionRepository rejectionRepository;
+    private final LedgerRejectionRecorder rejectionRecorder;
     private final TransactionTemplate transactionTemplate;
+    private final com.fooddelivery.common.event.EventBinder eventBinder;
 
-        private final com.fooddelivery.common.event.EventBinder eventBinder;
-
-public LedgerEventListener(DoubleEntryLedgerService ledgerService,
+    public LedgerEventListener(DoubleEntryLedgerService ledgerService,
                                ObjectMapper objectMapper,
                                IIdempotencyKeyRepository idempotencyKeyRepository,
                                ILedgerRejectionRepository rejectionRepository,
-                               TransactionTemplate transactionTemplate, com.fooddelivery.common.event.EventBinder eventBinder) {
+                               LedgerRejectionRecorder rejectionRecorder,
+                               TransactionTemplate transactionTemplate,
+                               com.fooddelivery.common.event.EventBinder eventBinder) {
         this.eventBinder = eventBinder;
         this.ledgerService = ledgerService;
         this.objectMapper = objectMapper;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
         this.rejectionRepository = rejectionRepository;
+        this.rejectionRecorder = rejectionRecorder;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -66,41 +70,41 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
 
         String idempotencyKeyStr = "processed_event:" + resolvedEventId;
 
-        transactionTemplate.execute(status -> {
-            if (idempotencyKeyRepository.existsById(idempotencyKeyStr)) {
-                log.info("Duplicate ledger event ignored: {}", idempotencyKeyStr);
-                return null;
-            }
-            idempotencyKeyRepository.save(new IdempotencyKey(idempotencyKeyStr));
+        try {
+            transactionTemplate.execute(status -> {
+                if (idempotencyKeyRepository.existsById(idempotencyKeyStr)) {
+                    log.info("Duplicate ledger event ignored: {}", idempotencyKeyStr);
+                    return null;
+                }
+                idempotencyKeyRepository.save(new IdempotencyKey(idempotencyKeyStr));
 
-            try {
-                JsonNode rootNode = objectMapper.readTree(payload);
-                String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
-                if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
-                    LedgerTransactionCommand cmd = eventBinder.bind(payload, LedgerTransactionCommand.class);
-                    try {
-                        ledgerService.record(cmd);
-                    } catch (LedgerRejectedException e) {
-                        log.warn("Ledger transaction {} rejected: {}", cmd.getTransactionId(), e.getMessage());
-                        LedgerRejection rejection = LedgerRejection.builder()
-                            .id(UUID.randomUUID())
-                            .eventId(resolvedEventId)
-                            .producer(cmd.getProducer())
-                            .payload(payload)
-                            .reason(e.getMessage())
-                            .createdAt(Instant.now())
-                            .build();
-                        rejectionRepository.save(rejection);
+                try {
+                    JsonNode rootNode = objectMapper.readTree(payload);
+                    String eventTypeStr = KafkaHeaderUtils.extractEventType(headers, rootNode);
+                    if (EventType.LEDGER_TRANSACTION_REQUEST.name().equals(eventTypeStr)) {
+                        LedgerTransactionCommand cmd = eventBinder.bind(payload, LedgerTransactionCommand.class);
+                        try {
+                            ledgerService.record(cmd);
+                        } catch (LedgerRejectedException rejection) {
+                            // Do not catch this inside the booking transaction and save there:
+                            // ledgerService has already marked that transaction rollback-only.
+                            throw new SemanticLedgerRejection(cmd, rejection);
+                        }
                     }
+                } catch (Exception e) {
+                    if (e instanceof RuntimeException) {
+                        throw (RuntimeException) e;
+                    }
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e) {
-                if (e instanceof RuntimeException) {
-                    throw (RuntimeException) e;
-                }
-                throw new RuntimeException(e);
-            }
-            return null;
-        });
+                return null;
+            });
+        } catch (SemanticLedgerRejection rejection) {
+            LedgerTransactionCommand command = rejection.command();
+            log.warn("Ledger transaction {} rejected: {}", command.getTransactionId(), rejection.getCause().getMessage());
+            rejectionRecorder.record(idempotencyKeyStr, resolvedEventId, command.getProducer(), payload,
+                    rejection.getCause().getMessage());
+        }
     }
 
     @DltHandler
@@ -119,5 +123,24 @@ public LedgerEventListener(DoubleEntryLedgerService ledgerService,
             .createdAt(Instant.now())
             .build();
         rejectionRepository.save(rejection);
+    }
+
+    /** Carries the parsed command outside the transaction that must be rolled back. */
+    private static final class SemanticLedgerRejection extends RuntimeException {
+        private final LedgerTransactionCommand command;
+
+        private SemanticLedgerRejection(LedgerTransactionCommand command, LedgerRejectedException cause) {
+            super(cause);
+            this.command = command;
+        }
+
+        private LedgerTransactionCommand command() {
+            return command;
+        }
+
+        @Override
+        public LedgerRejectedException getCause() {
+            return (LedgerRejectedException) super.getCause();
+        }
     }
 }

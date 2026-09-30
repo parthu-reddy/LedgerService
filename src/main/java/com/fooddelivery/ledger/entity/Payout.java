@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,6 +28,16 @@ public class Payout {
     @Id
     @Column(name = "id")
     private UUID id;
+
+    /**
+     * A second line of defence for callers that do not use the locked transition path. Terminal
+     * transitions use a row lock as well, because their ledger postings must be serialised before
+     * an account movement is created.
+     */
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    @Builder.Default
+    private Integer lockVersion = 0;
 
     @Column(name = "payee_type", nullable = false, length = 32)
     private String payeeType;

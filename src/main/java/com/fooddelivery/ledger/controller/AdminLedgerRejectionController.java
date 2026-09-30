@@ -97,19 +97,19 @@ public class AdminLedgerRejectionController {
                     "A resolution note is required: this is the audit record of why money that was "
                     + "refused no longer needs booking.");
         }
+        Instant resolvedAt = Instant.now();
+        String resolvedBy = currentAdmin();
+        int resolved = rejectionRepository.resolveIfUnresolved(id, resolvedAt, resolvedBy, request.note());
+
+        // A zero-row update is either a missing row or a concurrent/sequential winner. Read the
+        // committed row after the guarded update so every caller receives the first decision and
+        // no later caller can replace its actor, timestamp, or audit note.
         LedgerRejection rejection = rejectionRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rejection not found: " + id));
 
-        if (rejection.getResolvedAt() != null) {
-            // Idempotent: re-resolving must not overwrite who first signed it off.
-            return ResponseEntity.ok(toDto(rejection));
+        if (resolved == 1) {
+            log.info("Ledger rejection {} resolved by {}: {}", id, resolvedBy, request.note());
         }
-
-        rejection.setResolvedAt(Instant.now());
-        rejection.setResolvedBy(currentAdmin());
-        rejection.setResolutionNote(request.note());
-        rejectionRepository.save(rejection);
-        log.info("Ledger rejection {} resolved by {}: {}", id, rejection.getResolvedBy(), request.note());
 
         return ResponseEntity.ok(toDto(rejection));
     }

@@ -114,6 +114,13 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "name" : "Idempotency-Key",
+          "in" : "header",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -141,6 +148,13 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "name" : "Idempotency-Key",
+          "in" : "header",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -161,6 +175,13 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "Idempotency-Key",
+          "in" : "header",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -180,6 +201,13 @@
           "schema" : {
             "type" : "string",
             "format" : "uuid"
+          }
+        }, {
+          "name" : "Idempotency-Key",
+          "in" : "header",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -1155,6 +1183,10 @@
             "type" : "string",
             "format" : "uuid"
           },
+          "lockVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "payeeType" : {
             "type" : "string"
           },
@@ -1380,15 +1412,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
           "size" : {
             "type" : "integer",
@@ -1399,6 +1427,10 @@
             "items" : {
               "$ref" : "#/components/schemas/LedgerStatementLineDto"
             }
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "first" : {
             "type" : "boolean"
@@ -1419,9 +1451,6 @@
         "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
         "type" : "object",
         "properties" : {
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
           "paged" : {
             "type" : "boolean"
           },
@@ -1431,6 +1460,9 @@
           },
           "unpaged" : {
             "type" : "boolean"
+          },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
           "pageSize" : {
             "type" : "integer",
@@ -1860,9 +1892,13 @@
         }
       },
       "LedgerTransactionDto" : {
-        "required" : [ "amount", "category", "date", "fromAccountId", "toAccountId", "transactionId" ],
+        "required" : [ "accountId", "amount", "category", "date", "direction", "entryId", "transactionId" ],
         "type" : "object",
         "properties" : {
+          "entryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
           "transactionId" : {
             "type" : "string",
             "format" : "uuid"
@@ -1871,13 +1907,23 @@
             "type" : "string",
             "enum" : [ "DELIVERY_FEE", "PLATFORM_FIXED_FEE", "PLATFORM_BONUS", "FOOD_COST", "SGST", "CGST", "REFUND", "ORDER_TOTAL", "AD_IMPRESSION", "AD_CLICK", "AD_CONVERSION", "AD_WALLET_TOPUP", "CLAWBACK", "PAYOUT_TRANSFER", "STORE_CREDIT" ]
           },
-          "fromAccountId" : {
+          "accountId" : {
             "type" : "string",
             "format" : "uuid"
           },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "CREDIT", "DEBIT" ]
+          },
+          "fromAccountId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "deprecated" : true
+          },
           "toAccountId" : {
             "type" : "string",
-            "format" : "uuid"
+            "format" : "uuid",
+            "deprecated" : true
           },
           "amount" : {
             "type" : "number"
@@ -2000,15 +2046,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
           "size" : {
             "type" : "integer",
@@ -2019,6 +2061,10 @@
             "items" : {
               "$ref" : "#/components/schemas/ReconciliationRun"
             }
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "first" : {
             "type" : "boolean"
@@ -2047,15 +2093,11 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
-          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
           },
           "size" : {
             "type" : "integer",
@@ -2066,6 +2108,10 @@
             "items" : {
               "$ref" : "#/components/schemas/ReconciliationBreak"
             }
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "first" : {
             "type" : "boolean"

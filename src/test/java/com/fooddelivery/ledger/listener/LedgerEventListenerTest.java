@@ -11,6 +11,7 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fooddelivery.ledger.listener.LedgerEventListener;
 import com.fooddelivery.ledger.service.DoubleEntryLedgerService;
+import com.fooddelivery.ledger.service.LedgerRejectionRecorder;
 import com.fooddelivery.ledger.repository.ILedgerRejectionRepository;
 import com.fooddelivery.common.repository.IIdempotencyKeyRepository;
 import com.fooddelivery.common.dto.ledger.LedgerTransactionCommand;
@@ -27,6 +28,7 @@ public class LedgerEventListenerTest {
     private ObjectMapper objectMapper;
     private IIdempotencyKeyRepository idempotencyKeyRepository;
     private ILedgerRejectionRepository rejectionRepository;
+    private LedgerRejectionRecorder rejectionRecorder;
 
     @BeforeEach
     void setUp() {
@@ -34,6 +36,7 @@ public class LedgerEventListenerTest {
         objectMapper = new ObjectMapper();
         idempotencyKeyRepository = mock(IIdempotencyKeyRepository.class);
         rejectionRepository = mock(ILedgerRejectionRepository.class);
+        rejectionRecorder = mock(LedgerRejectionRecorder.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         
         when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
@@ -41,7 +44,8 @@ public class LedgerEventListenerTest {
             return callback.doInTransaction(null);
         });
 
-        listener = new LedgerEventListener(ledgerService, objectMapper, idempotencyKeyRepository, rejectionRepository, transactionTemplate,
+        listener = new LedgerEventListener(ledgerService, objectMapper, idempotencyKeyRepository, rejectionRepository,
+                rejectionRecorder, transactionTemplate,
                 new com.fooddelivery.common.event.EventBinder(objectMapper,
                         jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator()));
     }
@@ -83,7 +87,9 @@ public class LedgerEventListenerTest {
         listener.handleEvents(payload, headers);
 
         verify(ledgerService, times(1)).record(any(LedgerTransactionCommand.class));
-        verify(rejectionRepository, times(1)).save(any());
+        verify(rejectionRepository, never()).save(any());
+        verify(rejectionRecorder).record("processed_event:event-2", "event-2", "TEST_PRODUCER", payload,
+                "Invalid account");
     }
     
     @Test
@@ -97,5 +103,25 @@ public class LedgerEventListenerTest {
         listener.handleEvents(payload, headers);
 
         verify(ledgerService, never()).record(any());
+    }
+
+    @Test
+    void testHandleEvents_InfrastructureFailureStillEscapesForKafkaRetry() throws Exception {
+        LedgerTransactionCommand cmd = new LedgerTransactionCommand();
+        cmd.setTransactionId(java.util.UUID.randomUUID());
+        cmd.setProducer("TEST_PRODUCER");
+        String payload = objectMapper.writeValueAsString(cmd);
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("eventId", "event-infrastructure-failure");
+        headers.put("eventType", EventType.LEDGER_TRANSACTION_REQUEST.name());
+        when(idempotencyKeyRepository.existsById("processed_event:event-infrastructure-failure")).thenReturn(false);
+        doThrow(new IllegalStateException("database unavailable"))
+                .when(ledgerService).record(any(LedgerTransactionCommand.class));
+
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> listener.handleEvents(payload, headers));
+
+        assertEquals("database unavailable", thrown.getMessage());
+        verify(rejectionRecorder, never()).record(any(), any(), any(), any(), any());
     }
 }

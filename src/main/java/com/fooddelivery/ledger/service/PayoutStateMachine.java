@@ -8,7 +8,19 @@ import org.springframework.stereotype.Component;
 public class PayoutStateMachine {
 
     public void transitionTo(Payout payout, PayoutStatus newStatus) {
-        PayoutStatus current = payout.getStatus();
+        validateTransition(payout.getStatus(), newStatus);
+
+        if (payout.getStatus() == newStatus) {
+            return;
+        }
+        payout.setStatus(newStatus);
+    }
+
+    /**
+     * Checks a transition without mutating the payout. The operation record is claimed before a
+     * financial state change, so callers need to validate the move while the row is locked.
+     */
+    public void validateTransition(PayoutStatus current, PayoutStatus newStatus) {
 
         if (current == newStatus) {
             return;
@@ -38,7 +50,5 @@ public class PayoutStateMachine {
             default:
                 throw new IllegalArgumentException("Unknown status transition to " + newStatus);
         }
-
-        payout.setStatus(newStatus);
     }
 }

@@ -35,8 +35,10 @@ public class PayoutController {
 
     @PostMapping("/{payoutId}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> approvePayout(@PathVariable UUID payoutId) {
-        payoutService.approve(payoutId, getAdminId());
+    public ResponseEntity<Void> approvePayout(
+            @PathVariable UUID payoutId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        payoutService.approve(payoutId, getAdminId(), idempotencyKey);
         return ResponseEntity.ok().build();
     }
 
@@ -44,8 +46,9 @@ public class PayoutController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> markPayoutPaid(
             @PathVariable UUID payoutId,
-            @RequestParam String bankReference) {
-        payoutService.markPaid(payoutId, bankReference, getAdminId());
+            @RequestParam String bankReference,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        payoutService.markPaid(payoutId, bankReference, getAdminId(), idempotencyKey);
         return ResponseEntity.ok().build();
     }
 
@@ -53,15 +56,18 @@ public class PayoutController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> failPayout(
             @PathVariable UUID payoutId,
-            @RequestParam String reason) {
-        payoutService.fail(payoutId, reason, getAdminId());
+            @RequestParam String reason,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        payoutService.fail(payoutId, reason, getAdminId(), idempotencyKey);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{payoutId}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancelPayout(@PathVariable UUID payoutId) {
-        payoutService.cancel(payoutId, getAdminId());
+    public ResponseEntity<Void> cancelPayout(
+            @PathVariable UUID payoutId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
+        payoutService.cancel(payoutId, getAdminId(), idempotencyKey);
         return ResponseEntity.ok().build();
     }
 
@@ -106,4 +112,3 @@ public class PayoutController {
                 .build());
     }
 }
-

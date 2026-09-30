@@ -15,10 +15,15 @@ import com.fooddelivery.ledger.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,6 +35,7 @@ public class PayoutService {
 
     private final PayoutRepository payoutRepository;
     private final PayoutLineRepository payoutLineRepository;
+    private final PayoutOperationRepository payoutOperationRepository;
     private final ILedgerAccountRepository accountRepository;
     private final ILedgerEntryRepository entryRepository;
     private final BeneficiaryClient beneficiaryClient;
@@ -232,15 +238,23 @@ public class PayoutService {
         return payout;
     }
 
+    /**
+     * Approving, settling, failing, and cancelling a payout are financial operations. Each method
+     * locks the payout first, claims an immutable idempotency/audit record, and only then posts a
+     * ledger movement. A competing action cannot see the same pre-transition state.
+     */
     @Transactional
-    public void approve(UUID payoutId, UUID adminId) {
-        Payout payout = payoutRepository.findById(payoutId).orElseThrow();
-        if (payout.getStatus() == PayoutStatus.APPROVED) {
+    public void approve(UUID payoutId, UUID adminId, String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        String requestHash = requestHash(payoutId, PayoutOperationAction.APPROVE, adminId, null, null);
+        Optional<Payout> claimedPayout = lockAndClaimOperation(
+                payoutId, PayoutOperationAction.APPROVE, PayoutStatus.APPROVED,
+                adminId, key, requestHash, null, null, null);
+        if (claimedPayout.isEmpty()) {
             return;
         }
-        if (fourEyesEnabled && adminId.equals(payout.getCreatedBy())) {
-            throw new IllegalStateException("Four-eyes principle: cannot approve own payout");
-        }
+        Payout payout = claimedPayout.get();
+
         stateMachine.transitionTo(payout, PayoutStatus.APPROVED);
         payout.setApprovedBy(adminId);
         payout.setApprovedAt(Instant.now());
@@ -248,14 +262,20 @@ public class PayoutService {
     }
 
     @Transactional
-    public void markPaid(UUID payoutId, String bankReference, UUID adminId) {
-        Payout payout = payoutRepository.findById(payoutId).orElseThrow();
-        if (payout.getStatus() == PayoutStatus.PAID) {
+    public void markPaid(UUID payoutId, String bankReference, UUID adminId, String idempotencyKey) {
+        String normalizedBankReference = normalizeBankReference(bankReference);
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        String requestHash = requestHash(payoutId, PayoutOperationAction.MARK_PAID, adminId, normalizedBankReference, null);
+        UUID settledTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "PAID");
+        Optional<Payout> claimedPayout = lockAndClaimOperation(
+                payoutId, PayoutOperationAction.MARK_PAID, PayoutStatus.PAID,
+                adminId, key, requestHash, normalizedBankReference, null, settledTransactionId);
+        if (claimedPayout.isEmpty()) {
             return;
         }
+        Payout payout = claimedPayout.get();
+
         stateMachine.transitionTo(payout, PayoutStatus.PAID);
-        
-        UUID settledTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "PAID");
         LedgerLeg leg = new LedgerLeg(
                 LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
                 LedgerAccountType.BANK, com.fooddelivery.common.constants.LedgerAccounts.BANK,
@@ -268,20 +288,26 @@ public class PayoutService {
 
         payout.setPaidBy(adminId);
         payout.setPaidAt(Instant.now());
-        payout.setBankReference(bankReference);
+        payout.setBankReference(normalizedBankReference);
         payout.setSettledTransactionId(settledTransactionId);
         payoutRepository.save(payout);
     }
 
     @Transactional
-    public void fail(UUID payoutId, String reason, UUID adminId) {
-        Payout payout = payoutRepository.findById(payoutId).orElseThrow();
-        if (payout.getStatus() == PayoutStatus.FAILED) {
+    public void fail(UUID payoutId, String reason, UUID adminId, String idempotencyKey) {
+        String normalizedReason = normalizeFailureReason(reason);
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        String requestHash = requestHash(payoutId, PayoutOperationAction.FAIL, adminId, null, normalizedReason);
+        UUID failTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "FAIL");
+        Optional<Payout> claimedPayout = lockAndClaimOperation(
+                payoutId, PayoutOperationAction.FAIL, PayoutStatus.FAILED,
+                adminId, key, requestHash, null, normalizedReason, failTransactionId);
+        if (claimedPayout.isEmpty()) {
             return;
         }
+        Payout payout = claimedPayout.get();
+
         stateMachine.transitionTo(payout, PayoutStatus.FAILED);
-        
-        UUID failTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "FAIL");
         LedgerAccountType accountType = "RESTAURANT".equals(payout.getPayeeType()) ? LedgerAccountType.RESTAURANT_PAYABLE : LedgerAccountType.DRIVER_PAYABLE;
         LedgerLeg leg = new LedgerLeg(
                 LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
@@ -293,23 +319,25 @@ public class PayoutService {
         );
         doubleEntryLedgerService.record(txReq);
 
-        payout.setFailureReason(reason);
+        payout.setFailureReason(normalizedReason);
         payoutRepository.save(payout);
-
-        List<PayoutLine> lines = payoutLineRepository.findByPayoutId(payoutId);
-        lines.forEach(l -> l.setActive(false));
-        payoutLineRepository.saveAll(lines);
+        releasePayoutLines(payoutId);
     }
 
     @Transactional
-    public void cancel(UUID payoutId, UUID adminId) {
-        Payout payout = payoutRepository.findById(payoutId).orElseThrow();
-        if (payout.getStatus() == PayoutStatus.CANCELLED) {
+    public void cancel(UUID payoutId, UUID adminId, String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        String requestHash = requestHash(payoutId, PayoutOperationAction.CANCEL, adminId, null, null);
+        UUID cancelTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "CANCEL");
+        Optional<Payout> claimedPayout = lockAndClaimOperation(
+                payoutId, PayoutOperationAction.CANCEL, PayoutStatus.CANCELLED,
+                adminId, key, requestHash, null, null, cancelTransactionId);
+        if (claimedPayout.isEmpty()) {
             return;
         }
+        Payout payout = claimedPayout.get();
+
         stateMachine.transitionTo(payout, PayoutStatus.CANCELLED);
-        
-        UUID cancelTransactionId = com.fooddelivery.common.util.DeterministicIdUtils.ledgerId("ledger-service", payoutId, "CANCEL");
         LedgerAccountType accountType = "RESTAURANT".equals(payout.getPayeeType()) ? LedgerAccountType.RESTAURANT_PAYABLE : LedgerAccountType.DRIVER_PAYABLE;
         LedgerLeg leg = new LedgerLeg(
                 LedgerAccountType.PAYOUT_IN_TRANSIT, com.fooddelivery.common.constants.LedgerAccounts.PAYOUT_IN_TRANSIT,
@@ -322,10 +350,152 @@ public class PayoutService {
         doubleEntryLedgerService.record(txReq);
 
         payoutRepository.save(payout);
+        releasePayoutLines(payoutId);
+    }
 
+    private Optional<Payout> lockAndClaimOperation(UUID payoutId,
+                                                    PayoutOperationAction action,
+                                                    PayoutStatus targetStatus,
+                                                    UUID adminId,
+                                                    String idempotencyKey,
+                                                    String requestHash,
+                                                    String bankReference,
+                                                    String failureReason,
+                                                    UUID ledgerTransactionId) {
+        // Fast deterministic replay. The locked recheck below closes the window where a request
+        // starts before another transaction commits its operation record.
+        Optional<PayoutOperation> existing = payoutOperationRepository.findByIdempotencyKey(idempotencyKey);
+        if (existing.isPresent()) {
+            assertMatchingReplay(existing.get(), payoutId, action, adminId, requestHash);
+            return Optional.empty();
+        }
+
+        Payout payout = payoutRepository.findByIdForUpdate(payoutId)
+                .orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutId));
+
+        existing = payoutOperationRepository.findByIdempotencyKey(idempotencyKey);
+        if (existing.isPresent()) {
+            assertMatchingReplay(existing.get(), payoutId, action, adminId, requestHash);
+            return Optional.empty();
+        }
+
+        if (payout.getStatus() == targetStatus) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Payout is already " + targetStatus + "; retry the original operation with its idempotency key");
+        }
+        try {
+            stateMachine.validateTransition(payout.getStatus(), targetStatus);
+        } catch (IllegalStateException invalidTransition) {
+            // A request that waited on the payout lock is racing a completed action. Expose that as
+            // a conflict instead of a generic validation error, so the operator refreshes the
+            // payout rather than retrying a now-incompatible financial movement.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Payout state changed before this operation could be applied", invalidTransition);
+        }
+
+        if (action == PayoutOperationAction.APPROVE && fourEyesEnabled && adminId.equals(payout.getCreatedBy())) {
+            throw new IllegalStateException("Four-eyes principle: cannot approve own payout");
+        }
+
+        // Claim the key before a ledger movement. A unique-constraint exception would abort this
+        // PostgreSQL transaction, making a replay lookup impossible; ON CONFLICT DO NOTHING instead
+        // leaves it usable when a different payout concurrently tried the same key.
+        int inserted = payoutOperationRepository.insertIfAbsent(
+                UUID.randomUUID(), payoutId, action.name(), idempotencyKey, requestHash, adminId,
+                payout.getStatus().name(), targetStatus.name(), "APPLIED", bankReference, failureReason,
+                ledgerTransactionId);
+        if (inserted == 0) {
+            PayoutOperation winningOperation = payoutOperationRepository.findByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Payout operation key claim was lost without a persisted operation"));
+            assertMatchingReplay(winningOperation, payoutId, action, adminId, requestHash);
+            return Optional.empty();
+        }
+        if (inserted != 1) {
+            throw new IllegalStateException("Unexpected payout operation claim result: " + inserted);
+        }
+        return Optional.of(payout);
+    }
+
+    private void assertMatchingReplay(PayoutOperation operation,
+                                      UUID payoutId,
+                                      PayoutOperationAction action,
+                                      UUID adminId,
+                                      String requestHash) {
+        if (!Objects.equals(operation.getPayoutId(), payoutId)
+                || operation.getAction() != action
+                || !Objects.equals(operation.getActorId(), adminId)
+                || !Objects.equals(operation.getRequestHash(), requestHash)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Idempotency key was already used for a different payout operation");
+        }
+    }
+
+    private void releasePayoutLines(UUID payoutId) {
         List<PayoutLine> lines = payoutLineRepository.findByPayoutId(payoutId);
         lines.forEach(l -> l.setActive(false));
         payoutLineRepository.saveAll(lines);
+    }
+
+    private static String normalizeIdempotencyKey(String value) {
+        if (value == null || value.isBlank() || !value.equals(value.strip()) || value.length() > 255
+                || containsControlCharacter(value)) {
+            throw new IllegalArgumentException("PAYOUT_IDEMPOTENCY_KEY_INVALID");
+        }
+        return value;
+    }
+
+    private static String normalizeBankReference(String value) {
+        String normalized = normalizeRequiredText(value, "PAYOUT_BANK_REFERENCE", 3, 128);
+        if (!normalized.matches("[A-Za-z0-9][A-Za-z0-9._/-]*")) {
+            throw new IllegalArgumentException("PAYOUT_BANK_REFERENCE_INVALID");
+        }
+        return normalized;
+    }
+
+    private static String normalizeFailureReason(String value) {
+        return normalizeRequiredText(value, "PAYOUT_FAILURE_REASON", 5, 1000);
+    }
+
+    private static String normalizeRequiredText(String value, String field, int minLength, int maxLength) {
+        if (value == null) {
+            throw new IllegalArgumentException(field + "_REQUIRED");
+        }
+        String normalized = value.strip();
+        int length = normalized.codePointCount(0, normalized.length());
+        if (length < minLength || normalized.length() > maxLength || containsControlCharacter(normalized)) {
+            throw new IllegalArgumentException(field + "_INVALID");
+        }
+        return normalized;
+    }
+
+    private static boolean containsControlCharacter(String value) {
+        return value.codePoints().anyMatch(Character::isISOControl);
+    }
+
+    private static String requestHash(UUID payoutId,
+                                      PayoutOperationAction action,
+                                      UUID adminId,
+                                      String bankReference,
+                                      String failureReason) {
+        if (payoutId == null) {
+            throw new IllegalArgumentException("PAYOUT_ID_REQUIRED");
+        }
+        if (adminId == null) {
+            throw new IllegalArgumentException("PAYOUT_ACTOR_REQUIRED");
+        }
+        String canonical = action.name() + "\n" + payoutId + "\n" + adminId + "\n"
+                + Objects.toString(bankReference, "") + "\n" + Objects.toString(failureReason, "");
+        try {
+            byte[] bytes = MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(bytes.length * 2);
+            for (byte value : bytes) {
+                hex.append(String.format(Locale.ROOT, "%02x", value));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
     }
 
     @Transactional(readOnly = true)

@@ -15,6 +15,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import org.springframework.data.domain.Page;
 
 public class ReconciliationSubjectStabilityTest {
     
@@ -42,6 +45,11 @@ public class ReconciliationSubjectStabilityTest {
         when(pClient.getDailyTotals(any(), any(), any())).thenReturn(pt);
         when(entryRepo.sumByOwnerAndDirectionInWindow(any(), any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(entryRepo.sumByOwnerTypeAndDirectionInWindow(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepo.sumTotalDebitsInWindow(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepo.sumTotalCreditsInWindow(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(entryRepo.findUnbalancedTransactionsInWindow(any(), any())).thenReturn(List.of());
+        when(wClient.getBalances(anyInt(), anyInt())).thenReturn(Page.empty());
+        when(oClient.getDailyPayables(any(), any())).thenReturn(Map.of());
         
         // Setup a discrepancy for ORDERS_VS_CLEARING
         java.util.Map<String, BigDecimal> ot = new java.util.HashMap<>();
@@ -49,7 +57,8 @@ public class ReconciliationSubjectStabilityTest {
         when(oClient.getDailyPaidOrderTotal(any(), any())).thenReturn(ot);
 
         LocalDate date = LocalDate.of(2026, 9, 8);
-        service.executeRun(date);
+        ReconciliationRun firstRun = service.executeRun(date);
+        assertEquals("SUCCESS", firstRun.getStatus(), "every check must run in this stability fixture");
 
         ArgumentCaptor<ReconciliationBreak> breakCaptor = ArgumentCaptor.forClass(ReconciliationBreak.class);
         verify(breakRepo, atLeast(2)).save(breakCaptor.capture());
@@ -61,7 +70,8 @@ public class ReconciliationSubjectStabilityTest {
         clearInvocations(breakRepo);
 
         // Run again
-        service.executeRun(date);
+        ReconciliationRun secondRun = service.executeRun(date);
+        assertEquals("SUCCESS", secondRun.getStatus(), "a repeat must not hide a failed check");
 
         ArgumentCaptor<ReconciliationBreak> breakCaptor2 = ArgumentCaptor.forClass(ReconciliationBreak.class);
         verify(breakRepo, atLeast(2)).save(breakCaptor2.capture()); 

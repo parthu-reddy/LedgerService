@@ -21,6 +21,9 @@ spring:
     enabled: false
   cache:
     type: none
+  kafka:
+    listener:
+      auto-startup: false
   autoconfigure:
     exclude:
     - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration

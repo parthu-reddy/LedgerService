@@ -81,6 +81,9 @@ class LedgerTransactionConsumerContractTest {
     @MockBean
     private com.fooddelivery.ledger.repository.ILedgerRejectionRepository ledgerRejectionRepository;
 
+    @MockBean
+    private com.fooddelivery.ledger.service.LedgerRejectionRecorder ledgerRejectionRecorder;
+
     @Autowired
     private StubTrigger stubTrigger;
 
