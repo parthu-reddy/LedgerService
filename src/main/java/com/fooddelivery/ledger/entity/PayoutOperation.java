@@ -51,7 +51,7 @@ public class PayoutOperation {
     @Column(name = "idempotency_key", nullable = false, length = 255, updatable = false)
     private String idempotencyKey;
 
-    @Column(name = "request_hash", nullable = false, columnDefinition = "CHAR(64)", updatable = false)
+    @Column(name = "request_hash", nullable = false, length = 64, updatable = false)
     private String requestHash;
 
     @Column(name = "actor_id", nullable = false, updatable = false)
