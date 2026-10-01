@@ -33,6 +33,17 @@ import org.springframework.context.annotation.Configuration;
 @Import({LedgerControllerAuthorizationTest.ObservationConfig.class, com.fooddelivery.common.security.CommonSecurityConfig.class, LedgerController.class, PayoutController.class})
 public class LedgerControllerAuthorizationTest {
 
+    // @WithMockUser supplies the caller for these controller tests. Keep all role/owner
+    // authorization enabled; replace only the separate signature-verification boundary.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.common.security.SecurityContextFilter identityHeaderFilter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void configureMockIdentityFilter() throws Exception {
+        com.fooddelivery.common.test.MockIdentityFilterSupport.passThrough(identityHeaderFilter);
+    }
+
+
     @Configuration
     static class ObservationConfig {
         @Bean
@@ -173,4 +184,12 @@ public class LedgerControllerAuthorizationTest {
         mockMvc.perform(get("/api/v1/internal/admin/payouts/pending"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void anonymousCallerCannotReadAdminPayouts() throws Exception {
+        mockMvc.perform(get("/api/v1/internal/admin/payouts/pending"))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(accountRepository, ledgerService);
+    }
+
 }

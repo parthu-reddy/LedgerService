@@ -45,6 +45,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 public class AdminLedgerRejectionControllerTest {
 
+    // @WithMockUser supplies the caller for these controller tests. Keep all role/owner
+    // authorization enabled; replace only the separate signature-verification boundary.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.fooddelivery.common.security.SecurityContextFilter identityHeaderFilter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void configureMockIdentityFilter() throws Exception {
+        com.fooddelivery.common.test.MockIdentityFilterSupport.passThrough(identityHeaderFilter);
+    }
+
+
     @Autowired
     private MockMvc mockMvc;
 
