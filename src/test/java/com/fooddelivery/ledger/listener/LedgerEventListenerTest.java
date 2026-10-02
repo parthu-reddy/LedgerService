@@ -39,7 +39,7 @@ public class LedgerEventListenerTest {
         rejectionRecorder = mock(LedgerRejectionRecorder.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         
-        when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<Object> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
         });
@@ -124,4 +124,21 @@ public class LedgerEventListenerTest {
         assertEquals("database unavailable", thrown.getMessage());
         verify(rejectionRecorder, never()).record(any(), any(), any(), any(), any());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"{\"id\":\"1\"}", "invalid JSON", ""})
+    void deadLettersRetainJsonOrTheExactMalformedInputWithStableIdentity(String payload) throws Exception {
+        var headers = Map.<String, Object>of("eventId", "dlt-owned-event",
+                org.springframework.kafka.support.KafkaHeaders.EXCEPTION_MESSAGE, "x".repeat(1500));
+        listener.handleDltEvent(payload, "ledger-events-dlt", headers);
+        var retained = org.mockito.ArgumentCaptor.forClass(String.class);
+        var reason = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(rejectionRecorder).record(eq("dlt_event:dlt-owned-event"), eq("dlt-owned-event"), eq("DLT"), retained.capture(), reason.capture());
+        var json = objectMapper.readTree(retained.getValue());
+        assertNotNull(json);
+        if (payload.startsWith("{")) assertEquals("1", json.get("id").asText());
+        else assertEquals(payload, json.get("invalidJsonPayload").asText());
+        assertEquals(1000, reason.getValue().length());
+        verifyNoInteractions(rejectionRepository, ledgerService, idempotencyKeyRepository);
+    }
+
 }

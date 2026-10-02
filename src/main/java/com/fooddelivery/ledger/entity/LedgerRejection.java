@@ -33,6 +33,7 @@ public class LedgerRejection {
     @Column(name = "producer", length = 64)
     private String producer;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(name = "payload", columnDefinition = "jsonb", nullable = false)
     private String payload;
 

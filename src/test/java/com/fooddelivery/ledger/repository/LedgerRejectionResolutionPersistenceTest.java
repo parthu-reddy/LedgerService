@@ -67,6 +67,7 @@ class LedgerRejectionResolutionPersistenceTest {
                 .isZero();
 
         LedgerRejection stored = rejectionRepository.findById(id).orElseThrow();
+        assertThat(stored.getPayload()).isEqualTo("{\"transactionId\":\"ledger-event-1\"}");
         assertThat(stored.getResolvedAt()).isEqualTo(firstAt);
         assertThat(stored.getResolvedBy()).isEqualTo("first-admin");
         assertThat(stored.getResolutionNote()).isEqualTo("first decision");

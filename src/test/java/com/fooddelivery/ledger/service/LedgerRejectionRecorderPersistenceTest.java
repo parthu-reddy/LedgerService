@@ -74,6 +74,9 @@ class LedgerRejectionRecorderPersistenceTest {
 
         assertThat(idempotencyKeyRepository.findById(rolledBackKey)).isEmpty();
         assertThat(idempotencyKeyRepository.findById(terminalKey)).isPresent();
+        recorder.record(terminalKey, eventId, "customer-application", "{\"id\":\"1\"}", "Repeated delivery");
+        assertThat(rejectionRepository.findAll().stream().filter(r -> eventId.equals(r.getEventId())).toList())
+                .hasSize(1);
         assertThat(rejectionRepository.findAll())
                 .anySatisfy(rejection -> {
                     assertThat(rejection.getEventId()).isEqualTo(eventId);
