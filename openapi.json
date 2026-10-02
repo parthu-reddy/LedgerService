@@ -1412,11 +1412,19 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "size" : {
             "type" : "integer",
@@ -1428,19 +1436,11 @@
               "$ref" : "#/components/schemas/LedgerStatementLineDto"
             }
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -1451,6 +1451,9 @@
         "required" : [ "offset", "pageNumber", "pageSize", "paged", "unpaged" ],
         "type" : "object",
         "properties" : {
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "paged" : {
             "type" : "boolean"
           },
@@ -1460,9 +1463,6 @@
           },
           "unpaged" : {
             "type" : "boolean"
-          },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
           },
           "pageSize" : {
             "type" : "integer",
@@ -2046,11 +2046,19 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "size" : {
             "type" : "integer",
@@ -2062,19 +2070,11 @@
               "$ref" : "#/components/schemas/ReconciliationRun"
             }
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -2093,11 +2093,19 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "sort" : {
+            "$ref" : "#/components/schemas/SortObject"
+          },
           "pageable" : {
             "$ref" : "#/components/schemas/PageableObject"
           },
-          "sort" : {
-            "$ref" : "#/components/schemas/SortObject"
+          "numberOfElements" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "size" : {
             "type" : "integer",
@@ -2109,19 +2117,11 @@
               "$ref" : "#/components/schemas/ReconciliationBreak"
             }
           },
-          "number" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
           "first" : {
             "type" : "boolean"
           },
           "last" : {
             "type" : "boolean"
-          },
-          "numberOfElements" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "empty" : {
             "type" : "boolean"
@@ -2201,6 +2201,10 @@
           "id" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "legIndex" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "transactionId" : {
             "type" : "string",

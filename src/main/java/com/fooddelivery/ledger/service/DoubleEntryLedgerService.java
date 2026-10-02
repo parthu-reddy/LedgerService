@@ -112,7 +112,8 @@ public class DoubleEntryLedgerService {
         }
 
         // 4. Balance Rule and Apply Legs
-        for (LedgerLeg leg : cmd.getLegs()) {
+        for (int legIndex = 0; legIndex < cmd.getLegs().size(); legIndex++) {
+            LedgerLeg leg = cmd.getLegs().get(legIndex);
             LedgerAccount source = lockedAccounts.get(resolvedAccounts.get(leg.getFromId() + ":" + leg.getFromType().name()).getId());
             LedgerAccount target = lockedAccounts.get(resolvedAccounts.get(leg.getToId() + ":" + leg.getToType().name()).getId());
 
@@ -134,6 +135,7 @@ public class DoubleEntryLedgerService {
 
             LedgerEntry debit = LedgerEntry.builder()
                 .id(UUID.randomUUID())
+                .legIndex(legIndex)
                 .transactionId(cmd.getTransactionId())
                 .referenceId(cmd.getReferenceId())
                 .accountId(source.getId())
@@ -157,6 +159,7 @@ public class DoubleEntryLedgerService {
 
             LedgerEntry credit = LedgerEntry.builder()
                 .id(UUID.randomUUID())
+                .legIndex(legIndex)
                 .transactionId(cmd.getTransactionId())
                 .referenceId(cmd.getReferenceId())
                 .accountId(target.getId())

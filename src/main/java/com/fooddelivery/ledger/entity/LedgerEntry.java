@@ -21,7 +21,8 @@ import com.fooddelivery.common.enums.ChargeCategory;
 
 @Entity
 @Table(name = "ledger_entries", 
-       uniqueConstraints = {@jakarta.persistence.UniqueConstraint(columnNames = {"transaction_id", "account_id", "direction"})},
+       // One debit and one credit per leg. A transaction may touch an account more than once.
+       uniqueConstraints = {@jakarta.persistence.UniqueConstraint(columnNames = {"transaction_id", "leg_index", "direction"})},
        indexes = {
            @Index(name = "idx_entries_reference_id", columnList = "reference_id"),
            @Index(name = "idx_entries_account_created", columnList = "account_id, created_at"),
@@ -36,6 +37,10 @@ public class LedgerEntry {
     @Column(name = "id")
     @NotNull
     private UUID id;
+
+    /** Position of the leg in its transaction's command; the debit and credit of a leg share it. */
+    @Column(name = "leg_index", nullable = false)
+    private Integer legIndex;
 
     @Column(name = "transaction_id", nullable = false)
     @NotNull

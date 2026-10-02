@@ -90,6 +90,7 @@ class DoubleEntryLedgerServiceCategoryTotalTest {
     private void saveEntry(UUID accountId, TransactionDirection direction, ChargeCategory category, String amount, Instant at) {
         entryRepository.save(LedgerEntry.builder()
                 .id(UUID.randomUUID())
+                .legIndex(0) // one debit + one credit: a single-leg transaction
                 .transactionId(UUID.randomUUID())
                 .referenceId(UUID.randomUUID())
                 .accountId(accountId)
