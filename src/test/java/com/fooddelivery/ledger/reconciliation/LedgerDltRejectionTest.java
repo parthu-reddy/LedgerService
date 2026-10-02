@@ -5,21 +5,21 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.fooddelivery.ledger.listener.LedgerEventListener;
-import com.fooddelivery.ledger.repository.ILedgerRejectionRepository;
-import com.fooddelivery.ledger.entity.LedgerRejection;
+import com.fooddelivery.ledger.service.LedgerRejectionRecorder;
 import org.mockito.ArgumentCaptor;
 import java.util.HashMap;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class LedgerDltRejectionTest {
 
     @Test
     public void testDltRejection() {
-        ILedgerRejectionRepository repo = mock(ILedgerRejectionRepository.class);
-        // handleDltEvent touches only the rejection repository; the rest stay null, including the
-        // binder, so this test keeps asserting the DLT path and nothing else.
+        LedgerRejectionRecorder recorder = mock(LedgerRejectionRecorder.class);
+        ObjectMapper mapper = new ObjectMapper();
+        // handleDltEvent touches only the rejection recorder; the rest stay null
         LedgerEventListener listener = new LedgerEventListener(
-            null, null, null, repo, null, null, null
+            null, mapper, null, null, recorder, null, null
         );
 
         Map<String, Object> headers = new HashMap<>();
@@ -27,37 +27,34 @@ public class LedgerDltRejectionTest {
 
         listener.handleDltEvent("{\"dummy\":\"payload\"}", "test-topic-dlt", headers);
 
-        ArgumentCaptor<LedgerRejection> captor = ArgumentCaptor.forClass(LedgerRejection.class);
-        verify(repo).save(captor.capture());
-
-        LedgerRejection saved = captor.getValue();
-        assertNotNull(saved);
-        assertEquals("test-dlt-event-id", saved.getEventId());
-        assertEquals("DLT", saved.getProducer());
-        assertEquals("{\"dummy\":\"payload\"}", saved.getPayload());
-        assertEquals("Failed after all retries", saved.getReason());
+        verify(recorder).record(
+            eq("dlt_event:test-dlt-event-id"),
+            eq("test-dlt-event-id"),
+            eq("DLT"),
+            eq("{\"dummy\":\"payload\"}"),
+            eq("Failed after all retries")
+        );
     }
 
     @Test
     public void testDltRejectionWithMissingHeaders() {
-        ILedgerRejectionRepository repo = mock(ILedgerRejectionRepository.class);
-        // handleDltEvent touches only the rejection repository; the rest stay null, including the
-        // binder, so this test keeps asserting the DLT path and nothing else.
+        LedgerRejectionRecorder recorder = mock(LedgerRejectionRecorder.class);
+        ObjectMapper mapper = new ObjectMapper();
         LedgerEventListener listener = new LedgerEventListener(
-            null, null, null, repo, null, null, null
+            null, mapper, null, null, recorder, null, null
         );
 
         Map<String, Object> headers = new HashMap<>();
 
         listener.handleDltEvent("{\"dummy\":\"payload\"}", "test-topic-dlt", headers);
 
-        ArgumentCaptor<LedgerRejection> captor = ArgumentCaptor.forClass(LedgerRejection.class);
-        verify(repo).save(captor.capture());
-
-        LedgerRejection saved = captor.getValue();
-        assertNotNull(saved);
-        assertEquals("UNKNOWN_DLT", saved.getEventId());
-        assertEquals("DLT", saved.getProducer());
+        verify(recorder).record(
+            anyString(), // processedEventKey
+            anyString(), // eventId
+            eq("DLT"),
+            eq("{\"dummy\":\"payload\"}"),
+            eq("Failed after all retries")
+        );
     }
 
     /**
