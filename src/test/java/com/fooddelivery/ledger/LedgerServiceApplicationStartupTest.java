@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>This class previously forced {@code ddl-auto=validate} onto an empty H2 with Flyway disabled,
  * so it could only ever fail, and it did.
  */
-@SpringBootTest(properties={"spring.cloud.openfeign.client.config.campaign-service.url=http://campaign-test", "spring.cloud.openfeign.client.config.restaurant-service.url=http://restaurant-test"})
+@SpringBootTest(properties={"spring.cloud.openfeign.client.config.campaign-service.url=http://campaign-test", "spring.cloud.openfeign.client.config.restaurant-access.url=http://restaurant-test", "spring.cloud.openfeign.client.config.organisation-service.url=http://identity-test"})
 @ActiveProfiles("test")
 public class LedgerServiceApplicationStartupTest {
 
@@ -82,14 +82,22 @@ public class LedgerServiceApplicationStartupTest {
         var user = java.util.UUID.randomUUID();
         var outlet = java.util.UUID.randomUUID();
         var advertiser = java.util.UUID.randomUUID();
+        var orgId = java.util.UUID.randomUUID();
         org.mockito.Mockito.when(ownershipTransport.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(invocation -> {
                     feign.Request request = invocation.getArgument(0);
                     org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of("SERVICE"),
                             java.util.List.copyOf(request.headers().get("X-User-Roles")));
-                    String response = request.url().contains("/advertisers/")
-                            ? "{\"userId\":\"" + user + "\"}"
-                            : "[\"" + outlet + "\"]";
+                    String response;
+                    if (request.url().contains("/advertisers/")) {
+                        response = "{\"userId\":\"" + user + "\"}";
+                    } else if (request.url().contains("/members/")) {
+                        response = "{\"organisationId\":\"" + orgId + "\",\"organisationStatus\":\"ACTIVE\",\"userId\":\"" + user
+                                + "\",\"role\":\"MANAGER\",\"status\":\"ACTIVE\"}";
+                    } else {
+                        response = "{\"outletId\":\"" + outlet + "\",\"brandId\":\"" + java.util.UUID.randomUUID()
+                                + "\",\"organisationId\":\"" + orgId + "\"}";
+                    }
                     return feign.Response.builder().status(200).reason("OK").request(request)
                             .headers(java.util.Map.of("Content-Type", java.util.List.of("application/json")))
                             .body(response, java.nio.charset.StandardCharsets.UTF_8).build();
@@ -107,7 +115,7 @@ public class LedgerServiceApplicationStartupTest {
                 com.fooddelivery.common.security.money.MoneyOwnerType.ADVERTISER, advertiser));
         org.junit.jupiter.api.Assertions.assertFalse(policy.canAccessMoney(owner,
                 com.fooddelivery.common.security.money.MoneyOwnerType.RESTAURANT, java.util.UUID.randomUUID()));
-        org.mockito.Mockito.verify(ownershipTransport, org.mockito.Mockito.times(2))
+        org.mockito.Mockito.verify(ownershipTransport, org.mockito.Mockito.times(4))
                 .execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 }
