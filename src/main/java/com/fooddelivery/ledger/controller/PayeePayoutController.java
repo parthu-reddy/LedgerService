@@ -51,9 +51,11 @@ public class PayeePayoutController {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Payout> payoutPage = payoutService.getPayouts(payeeType, payeeId, pageable);
+        boolean mayReadBankDetails = moneyAccessPolicy.canManagePayouts(authentication, moneyOwnerType, payeeId);
         
         PageResponseDto<PayoutDto> response = PageResponseDto.<PayoutDto>builder()
-                .content(payoutPage.getContent().stream().map(PayoutMapper::toDto).collect(Collectors.toList()))
+                .content(payoutPage.getContent().stream()
+                        .map(payout -> toPayeeDto(payout, mayReadBankDetails)).collect(Collectors.toList()))
                 .number(payoutPage.getNumber())
                 .size(payoutPage.getSize())
                 .totalElements(payoutPage.getTotalElements())
@@ -87,11 +89,19 @@ public class PayeePayoutController {
         }
 
         PayoutDetailDto detailDto = new PayoutDetailDto(
-                PayoutMapper.toDto(payout),
+                toPayeeDto(payout, moneyAccessPolicy.canManagePayouts(authentication, moneyOwnerType, payeeId)),
                 payoutLineRepository.findByPayoutId(payoutId).stream()
                         .map(PayoutMapper::toDto)
                         .collect(Collectors.toList())
         );
         return ResponseEntity.ok(detailDto);
+    }
+
+    private PayoutDto toPayeeDto(Payout payout, boolean mayReadBankDetails) {
+        PayoutDto dto = PayoutMapper.toDto(payout);
+        if (!mayReadBankDetails) {
+            dto.setBeneficiarySnapshot(null);
+        }
+        return dto;
     }
 }
